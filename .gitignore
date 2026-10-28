@@ -1,0 +1,10 @@
+build/
+third_party/mbedtls/
+dist/HI5/hi5
+dist/HI5/hi5.sav
+dist/HI5/hi5.sav.tmp
+dist/HI5/log.txt
+dist/HI5/VERSION
+dist/HI5/DEVICE
+dist/HI5/LICENSE-mbedtls.txt
+__pycache__/

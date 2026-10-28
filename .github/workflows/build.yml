@@ -1,0 +1,128 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a GitHub release with this tag (e.g. v0.1.0). Leave empty to just build."
+        required: false
+        default: ""
+
+jobs:
+  trimui:
+    name: TrimUI packages (Brick / Brick Hammer, Brick Pro)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          # generated files are committed; keep make from regenerating them
+          touch src/font_data.h dist/HI5/icon.png
+          pip install ziglang==0.14.1
+          make -j"$(nproc)" package
+          for d in brick brickpro; do
+            z=build/HI5-$d.zip
+            ls -l $z
+            unzip -l $z | grep -q "Apps/HI5/hi5$"
+            unzip -l $z | grep -q "Apps/HI5/launch.sh$"
+            unzip -l $z | grep -q "Apps/HI5/samples/README.txt$"
+            # the self-updater needs these: the CA bundle for HTTPS, and VERSION and DEVICE for install.sh
+            unzip -l $z | grep -q "Apps/HI5/cacert.pem"
+            test "$(unzip -p $z Apps/HI5/VERSION)" = "$(make -s version)"
+            test "$(unzip -p $z Apps/HI5/DEVICE)" = $d
+            file build/$d/hi5 | grep -q "ARM aarch64"
+          done
+          # the two builds differ by the Brick Pro's sticks (and the zip each updates from)
+          ! cmp -s build/brick/hi5 build/brickpro/hi5
+          strings build/brick/hi5 | grep -qx "/HI5-brick.zip"
+          strings build/brickpro/hi5 | grep -qx "/HI5-brickpro.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HI5-trimui
+          path: |
+            build/HI5-brick.zip
+            build/HI5-brickpro.zip
+
+  test:
+    name: Engine and UI tests (host)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run the test harness
+        run: |
+          touch src/font_data.h dist/HI5/icon.png
+          make build/hi5_test build/hi5_synctest
+          mkdir -p build/test
+          build/hi5_test build/test dist/HI5/samples | tee build/test/results.txt
+      - name: Check the results
+        run: |
+          r=build/test/results.txt
+          grep -q "^bpm after tap: 139.5, samples: 5" $r
+          grep -q "^chain: bar1=A(sub on) bar2=B(sub off) bar3=B(sub off) bar4=A(sub on)" $r
+          grep -q "^sync: bpm=128.0 playing=1 peers=1 leader=1 phase err after 4 s = -\?0.000 steps" $r
+          grep -q "^sync: new packet 48 bytes, bpm=140.0 following=1" $r
+          grep -q "^sync timing: .*(want under 1 and 2: 1)" $r
+          grep -q "^sync timing, a leader without echo: .*(want under 6: 1)" $r
+          grep -q "^clock: 2 PPQN at 120 BPM -> 17 pulses in 4 s, mean gap 250.00 ms" $r
+          grep -q "^clock: 24 PPQN at 120 BPM -> 193 pulses in 4 s, mean gap 20.83 ms" $r
+          grep -q "^v0.0.1 save: loaded=1 bpm=99 fx0=REPEAT out_mode=0" $r
+          grep -q "^v0.0.7 save: loaded=1 sync=2 kits used=0" $r
+          grep -q "^update prompt: shown 1, A installs 1, B closes it 1, pattern untouched 1" $r
+          # USB MIDI clock and the Brick Pro's sticks
+          grep -q "^midi clock in: START plays 1 from the first step 1, 120 BPM -> .* (1), phase within .* (want under 0.1: 1), STOP stops 1" $r
+          grep -q "^midi clock out: START 1, .*(want 192: 1), STOP 1" $r
+          grep -q "^stick: .*(darker: 1), .*(open again: 1); fx: stick 1, R2 first 1, back 1, insert 1, off 1" $r
+      - name: Wi-Fi sync between two units over UDP
+        run: |
+          build/hi5_synctest LEAD 131 6 > build/test/lead.txt &
+          sleep 0.3
+          build/hi5_synctest FOLLOW 100 5 | tee build/test/follow.txt
+          wait
+          grep -q "bpm 131.0 playing 1 peers 1 leading 0 following 1" build/test/follow.txt
+      - name: Self-update against a local fake GitHub
+        run: make update-test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-output
+          path: build/test/
+
+  release:
+    name: Publish release
+    # runs for: a pushed v* tag, a release created on the website, or a manual run with a tag filled in
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || inputs.release_tag != ''
+    needs: [trimui, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches HI5_VERSION
+        env:
+          TAG: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
+        run: |
+          # the app compares the release tag with its own HI5_VERSION; a mismatch would offer the update forever
+          v=$(sed -n 's/^#define HI5_VERSION "\([^"]*\)".*/\1/p' src/engine.h)
+          [ "$TAG" = "v$v" ] || { echo "::error::tag $TAG doesn't match HI5_VERSION $v in src/engine.h"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          name: HI5-trimui
+      - name: Create the GitHub release with the TrimUI packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" HI5-brick.zip HI5-brickpro.zip --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" HI5-brick.zip HI5-brickpro.zip \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "HI5 $TAG" \
+              --notes-file .github/release-notes.md \
+              --latest
+          fi
