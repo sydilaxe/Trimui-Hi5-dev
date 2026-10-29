@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- HI5's list glyph for MustardOS: a Euclidean ring, five hits of eight around a centre beat -->
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <g fill="#ffffff">
+    <circle cx="40.0" cy="12.0" r="7"/>
+    <circle cx="59.8" cy="20.2" r="3"/>
+    <circle cx="68.0" cy="40.0" r="7"/>
+    <circle cx="59.8" cy="59.8" r="7"/>
+    <circle cx="40.0" cy="68.0" r="3"/>
+    <circle cx="20.2" cy="59.8" r="7"/>
+    <circle cx="12.0" cy="40.0" r="7"/>
+    <circle cx="20.2" cy="20.2" r="3"/>
+    <circle cx="40" cy="40" r="9"/>
+  </g>
+</svg>

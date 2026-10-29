@@ -14,7 +14,7 @@ on:
 
 jobs:
   trimui:
-    name: TrimUI packages (Brick / Brick Hammer, Brick Pro)
+    name: TrimUI packages (Brick / Brick Hammer, Brick Pro; TrimUI OS and MustardOS)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,29 +23,61 @@ jobs:
           # generated files are committed; keep make from regenerating them
           touch src/font_data.h dist/HI5/icon.png
           pip install ziglang==0.14.1
+          # the scripts the device runs: launchers, the screen wake, the system report
+          for s in dist/HI5/launch.sh dist/HI5/sysinfo.sh dist/mustardos/*.sh; do sh -n "$s"; done
+          bash -n install.sh
           make -j"$(nproc)" package
+          v=$(make -s version)
           for d in brick brickpro; do
             z=build/HI5-$d.zip
             ls -l $z
             unzip -l $z | grep -q "Apps/HI5/hi5$"
             unzip -l $z | grep -q "Apps/HI5/launch.sh$"
+            unzip -l $z | grep -q "Apps/HI5/sysinfo.sh$"
             unzip -l $z | grep -q "Apps/HI5/samples/README.txt$"
             # the self-updater needs these: the CA bundle for HTTPS, and VERSION and DEVICE for install.sh
             unzip -l $z | grep -q "Apps/HI5/cacert.pem"
-            test "$(unzip -p $z Apps/HI5/VERSION)" = "$(make -s version)"
+            test "$(unzip -p $z Apps/HI5/VERSION)" = "$v"
             test "$(unzip -p $z Apps/HI5/DEVICE)" = $d
             file build/$d/hi5 | grep -q "ARM aarch64"
           done
-          # the two builds differ by the Brick Pro's sticks (and the zip each updates from)
-          ! cmp -s build/brick/hi5 build/brickpro/hi5
+          # MustardOS: the same binaries in "HI5/", with mux_launch.sh and the list glyph
+          for d in brick brickpro; do
+            z=build/HI5-mustardos-$d.muxapp
+            ls -l $z
+            unzip -l $z | grep -q "HI5/hi5$"
+            unzip -l $z | grep -q "HI5/mux_launch.sh$"
+            unzip -l $z | grep -q "HI5/wake_screen.sh$"
+            unzip -l $z | grep -q "HI5/sysinfo.sh$"
+            unzip -l $z | grep -q "HI5/glyph/hi5.svg$"
+            unzip -l $z | grep -q "HI5/samples/README.txt$"
+            unzip -l $z | grep -q "HI5/cacert.pem"
+            test "$(unzip -p $z "HI5/VERSION")" = "$v"
+            test "$(unzip -p $z "HI5/DEVICE")" = $d
+            unzip -p $z "HI5/hi5" | cmp -s - build/$d/hi5
+            # MustardOS's Archive Manager refuses absolute and .. paths, and anything not a file or folder
+            # (a bare "! cmd" can't fail a step under set -e, hence the ifs)
+            if unzip -Z1 $z | grep -Eq '^/|(^|/)\.\.(/|$)|\\'; then echo "::error::$z has unsafe paths"; exit 1; fi
+            if unzip -Zl $z | grep -Eq '^[bclps]'; then echo "::error::$z has links or devices"; exit 1; fi
+            # the TrimUI OS zip must not carry mux_launch.sh: it is how the app tells the packages apart
+            if unzip -l build/HI5-$d.zip | grep -q mux_launch.sh; then
+              echo "::error::HI5-$d.zip has mux_launch.sh"; exit 1
+            fi
+          done
+          # the two builds differ by the Brick Pro's sticks (and the packages each updates from)
+          if cmp -s build/brick/hi5 build/brickpro/hi5; then echo "::error::the two builds are the same"; exit 1; fi
           strings build/brick/hi5 | grep -qx "/HI5-brick.zip"
           strings build/brickpro/hi5 | grep -qx "/HI5-brickpro.zip"
+          strings build/brick/hi5 | grep -qx "/HI5-mustardos-brick.muxapp"
+          strings build/brickpro/hi5 | grep -qx "/HI5-mustardos-brickpro.muxapp"
       - uses: actions/upload-artifact@v4
         with:
           name: HI5-trimui
           path: |
             build/HI5-brick.zip
             build/HI5-brickpro.zip
+            build/HI5-mustardos-brick.muxapp
+            build/HI5-mustardos-brickpro.muxapp
 
   test:
     name: Engine and UI tests (host)
@@ -75,6 +107,7 @@ jobs:
           # USB MIDI clock and the Brick Pro's sticks
           grep -q "^midi clock in: START plays 1 from the first step 1, 120 BPM -> .* (1), phase within .* (want under 0.1: 1), STOP stops 1" $r
           grep -q "^midi clock out: START 1, .*(want 192: 1), STOP 1" $r
+          grep -q "^perflog: .*(want 0, 1, 1: 1)" $r
           grep -q "^stick: .*(darker: 1), .*(open again: 1); fx: stick 1, R2 first 1, back 1, insert 1, off 1" $r
       - name: Wi-Fi sync between two units over UDP
         run: |
@@ -111,15 +144,16 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: HI5-trimui
-      - name: Create the GitHub release with the TrimUI packages
+      - name: Create the GitHub release with the TrimUI OS and MustardOS packages
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
         run: |
+          files="HI5-brick.zip HI5-brickpro.zip HI5-mustardos-brick.muxapp HI5-mustardos-brickpro.muxapp"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" HI5-brick.zip HI5-brickpro.zip --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$TAG" $files --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" HI5-brick.zip HI5-brickpro.zip \
+            gh release create "$TAG" $files \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "HI5 $TAG" \

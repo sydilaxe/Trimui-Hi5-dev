@@ -1,5 +1,6 @@
 #!/bin/sh
-# HI5 launcher for TrimUI OS (TrimUI Brick, Brick Hammer and Brick Pro).
+# HI5 launcher for the TrimUI Brick, Brick Hammer and Brick Pro: TrimUI OS runs it
+# directly, MustardOS through mux_launch.sh.
 # All four cores stay online, at full speed, while it plays.
 cd "$(dirname "$0")"
 
@@ -23,10 +24,14 @@ export LD_LIBRARY_PATH="/usr/trimui/lib:/usr/lib:$LD_LIBRARY_PATH"
 #   HI5_SYNC_LATENCY=n  Wi-Fi sync: the frames the sound driver holds (the buffer size by default)
 #   HI5_ROTATE=180      turn the picture, for a firmware whose screen is turned
 #   HI5_JOYMAP=A=1,B=0  another firmware's button numbers
+#   HI5_LOG=2           the performance log in log.txt every second, and every button press (1: every
+#                       10 s, the default; 0: off). HI5_SYSINFO=0: no sysinfo.txt (see sysinfo.sh)
+[ "${HI5_SYSINFO:-1}" != 0 ] && [ "${HI5_LOG:-1}" != 0 ] && ./sysinfo.sh start hi5
 # exit status 75: the app has just updated itself, so start the new version
 while :; do
     ./hi5 > log.txt 2>&1
     [ $? -eq 75 ] || break
 done
 
+./sysinfo.sh stop hi5
 [ -n "$gov_was" ] && echo "$gov_was" > $CPU/cpu0/cpufreq/scaling_governor 2>/dev/null

@@ -12,6 +12,7 @@
 #include "engine.h"
 #include "gfx.h"
 #include "midi.h"
+#include "perflog.h"
 #include "sync.h"
 #include "ui.h"
 #include "update.h"
@@ -773,6 +774,35 @@ int main(int argc, char **argv)
         ui_draw(fb);
     secs = (double)(clock() - c0) / CLOCKS_PER_SEC;
     printf("ui: %.2f ms per frame\n", secs / 300 * 1000);
+
+    /* the performance log's dropout count: steady 10 ms callbacks, then one
+     * that comes 60 ms late (the device ran dry), then steady again */
+    {
+        setenv("HI5_LOG", "0", 1); /* the counting, without the lines */
+        perf_init("HI5", "brick");
+        perf_audio_open(48000, 480, NULL);
+        uint64_t t = perf_now_us();
+        struct timespec ts;
+        int steady = -1, stall = -1;
+        for (int i = 0; i < 60; i++) {
+            if (i == 30) {
+                steady = (int)perf_dropouts();
+                t += 60000;
+            }
+            if (i == 31)
+                stall = (int)perf_dropouts();
+            for (uint64_t now; (now = perf_now_us()) < t;) {
+                uint64_t w = t - now;
+                ts.tv_sec = 0, ts.tv_nsec = (long)(w > 2000 ? w - 1000 : w) * 1000;
+                nanosleep(&ts, NULL);
+            }
+            perf_audio_end(perf_audio_begin(480));
+            t += 10000;
+        }
+        int after = (int)perf_dropouts();
+        printf("perflog: dropouts steady %d, after a 60 ms stall %d, steady again %d (want 0, 1, 1: %d)\n", steady,
+               stall, after, steady == 0 && stall == 1 && after == 1);
+    }
     free(pcm);
     return 0;
 }
