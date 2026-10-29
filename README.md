@@ -1,7 +1,7 @@
 # HI5
 
 A 5-voice FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro running
-TrimUI OS, ported from the Miyoo Mini Plus version.
+TrimUI OS or [MustardOS](https://muos.dev), ported from the Miyoo Mini Plus version.
 
 It has four FM percussion voices (SUB, KICK, SNARE, PERC) and a HAT voice, which is a
 micro-loop sampler. Each voice is sequenced by three polymetric Euclidean cells: HIT, STUT
@@ -14,8 +14,14 @@ and a `hi5.sav` saved on the Miyoo loads as it is.
 
 ## Install
 
-There are two builds: `HI5-brick.zip` for the **Brick** and **Brick Hammer**, and
-`HI5-brickpro.zip` for the **Brick Pro** (it adds the analog sticks).
+Each release has a package for each device and firmware. The Brick Pro's adds the analog sticks.
+
+| | TrimUI OS | MustardOS |
+| --- | --- | --- |
+| **Brick**, **Brick Hammer** | `HI5-brick.zip` | `HI5-mustardos-brick.muxapp` |
+| **Brick Pro** | `HI5-brickpro.zip` | `HI5-mustardos-brickpro.muxapp` |
+
+### TrimUI OS
 
 1. Download the zip for your device from the latest [release](../../releases), or from the
    artifacts of the latest run on the Actions tab, or build it (see below).
@@ -24,12 +30,34 @@ There are two builds: `HI5-brick.zip` for the **Brick** and **Brick Hammer**, an
    Brick Pro).
 3. Launch **HI5** from Apps. Press MENU to quit.
 
-The state autosaves to `hi5.sav` in the app folder. To bring a song over from the Miyoo, copy
-its `hi5.sav` into the folder.
+### MustardOS
+
+1. Download the `.muxapp` for your device from the latest [release](../../releases).
+2. Copy it into the `ARCHIVE` folder at the root of the first SD card (SD1).
+3. On the device, open **Applications → Archive Manager** and install it. It lands in
+   `MUOS/application/HI5` (on SD2 if you have one, else SD1).
+4. Launch **HI5** from **Applications**. Press MENU to quit.
+
+By hand instead: unzip the `.muxapp` (it is a zip) and copy its `HI5` folder into
+`MUOS/application/` on the card. `make install SD=/path/to/card OS=mustardos` (add
+`DEVICE=brickpro` for the Brick Pro) does the same from a build.
+
+The app reads MustardOS's own controller, so the buttons are as labelled whatever A/B layout
+MustardOS is set to. `log.txt` in the app folder names the controller it found.
+
+On the Brick Pro the screen can stay dark after an app opens under MustardOS (it plays, but
+nothing shows until the power button sleeps and wakes the device). Once its window is up, HI5
+runs `wake_screen.sh`, which does what MustardOS does on waking: the framebuffer blanked and
+unblanked, and the saved brightness applied again. `HI5_SCREEN_WAKE=` (empty) in `mux_launch.sh`
+turns it off.
+
+The state autosaves to `hi5.sav` in the app folder. A song saved on the Miyoo, or under the
+other firmware, loads as it is: copy its `hi5.sav` into the folder.
 
 ### Over Wi-Fi
 
-With the TrimUI's SSH server on, run this on a computer on the same network:
+With the TrimUI's SSH server on (on MustardOS, Secure Shell under Web Services), run this on a
+computer on the same network:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
@@ -37,9 +65,11 @@ curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/instal
 
 The script scans the local /24 for an SSH server (a handheld's dropbear first), checks the
 installed version against the latest release, and if the release is newer copies it to
-`SD:/Apps/HI5`. Your song (`hi5.sav`) and samples are kept. It logs in as `root` (`HI5_USER`
-changes it). The first time, it installs the Brick build; set `HI5_DEVICE=brickpro` for the
-Brick Pro's. After that the installed copy says which build it is. The address that worked is
+`SD:/Apps/HI5`, or on MustardOS to its application folder. Your song (`hi5.sav`) and samples are
+kept. It logs in as `root` (`HI5_USER` changes it). It tells TrimUI OS and MustardOS apart by
+itself, and MustardOS says which device it is. On TrimUI OS, the first time, it installs the Brick
+build; set `HI5_DEVICE=brickpro` for the Brick Pro's. After that the installed copy says which
+build it is. The address that worked is
 saved in `~/.config/hi5-trimui/host`; `HI5_HOST=192.168.1.28` skips the scan. `HI5_FORCE=1`
 reinstalls even when the version matches. Quit HI5 on the TrimUI before updating.
 
@@ -47,8 +77,8 @@ reinstalls even when the version matches. Quit HI5 on the TrimUI before updating
 
 HI5 keeps itself up to date. Five seconds after it starts, it asks GitHub for the latest
 release, retrying each minute (up to five times) while Wi-Fi comes up. When there's a newer one
-it asks **A: update and restart / B: not now**. A downloads the release's zip for this device
-while the music keeps playing. It checks every file, swaps in the ones that changed and starts
+it asks **A: update and restart / B: not now**. A downloads the release's package for this
+device and firmware while the music keeps playing. It checks every file, swaps in the ones that changed and starts
 the new version. Your song and your own samples stay as they are. If anything goes wrong on the
 way, nothing is changed. B asks again next time you open the app. `HI5_UPDATE=0` in `launch.sh`
 turns the check off. An update replaces `launch.sh`, so set any of its switches again
@@ -56,7 +86,7 @@ afterwards.
 
 ### Your own hat samples
 
-Put `.wav` files in `Apps/HI5/samples/`: 8/16/24/32-bit PCM or 32-bit float, mono or stereo,
+Put `.wav` files in the app folder's `samples/` (`Apps/HI5/samples/` on TrimUI OS): 8/16/24/32-bit PCM or 32-bit float, mono or stereo,
 any sample rate, up to 3 s each. They load in filename order after the built-in sounds
 (CHAT, OHAT, PEDAL, SHAKR, RIDE). Pick them on the SYNTH page under HAT > SAMPLE.
 
@@ -140,7 +170,35 @@ The sound is made in 512-frame buffers at 48 kHz (about 11 ms, half the Miyoo's 
 memory locked so it never waits for a page to be read back in; the screen runs below it at 30
 frames a second, and the buttons are read every few milliseconds. If you hear crackles, set
 `HI5_BUFFER=1024`. `HI5_RATE=44100` does a little less work. `HI5_ROTATE=180` turns the picture and
-`HI5_JOYMAP=A=1,B=0,...` renumbers the buttons, for a firmware that differs.
+`HI5_JOYMAP=A=1,B=0,...` renumbers the buttons (also `L2`, `R2`, `L3`, `R3`), for a firmware that
+differs.
+
+## Logs and tuning
+
+Two files in the app folder tell you how HI5 runs on your device, Brick or Brick Pro:
+
+- **`log.txt`**, written by the app. At start: the firmware and board, the build, the processor's
+  governor and clock range, the memory, the screen and how it is drawn, the controllers found
+  (and which numbering is used), the sound device and buffer, and how long start-up took. Then
+  a **STAT** line every 10 seconds:
+
+  ```
+     30.512 STAT  audio load avg 9% peak 21% | dropouts 0 | gap max 11.0 ms (buffer 10.7) | 94 calls/s | screen 30 fps, avg 6.2 ms max 9.8 ms | cpu 1800 MHz 51 C cores 0-3 load 0.62
+  ```
+
+  *audio load* is the time spent making sound against the time it lasts (over 60%, crackles
+  are near); *dropouts* count the times the sound device ran dry (a crackle each); *gap max* is
+  the longest wait between two buffers. **HINT** lines say what to change, such as
+  `HI5_BUFFER=1024` when the load is high or there were dropouts, or that the processor was
+  slowed down or is hot. At quit an **END** line sums up the session's worst figures.
+- **`sysinfo.txt`**, written by `sysinfo.sh` from `launch.sh`: the firmware, the processor,
+  memory, sound, USB and input devices and the processes running at start, then every 10
+  seconds the system load, clock, temperature and the busiest processes.
+
+`HI5_LOG=2` in `launch.sh` writes the STAT line every second and logs every button press, hat
+and trigger as the controller sends it and as HI5 reads it, and on the Brick Pro the sticks'
+moves: the way to check a firmware's button numbering. `HI5_LOG=0` turns the log off and
+`HI5_SYSINFO=0` the system report. Both files are rewritten each time HI5 starts.
 
 ## Wi-Fi sync
 
@@ -164,16 +222,22 @@ You need [zig](https://ziglang.org/) 0.14 for the cross-compile: `zig` on the pa
 
 ```sh
 make              # cross-compile build/brick/hi5 and build/brickpro/hi5
-make package      # build/HI5-brick.zip and build/HI5-brickpro.zip, as CI does
+make package      # the TrimUI OS zips and the MustardOS .muxapps, as CI does
 make test         # host harness: screenshots, audio and checks into build/test
 make update-test  # the self-update end to end, against tools/fake_github.py
-make install SD=/path/to/mounted/sdcard [DEVICE=brickpro]
+make install SD=/path/to/mounted/sdcard [DEVICE=brickpro] [OS=mustardos]
 make build/hi5_synctest   # host-side Wi-Fi sync interop check
 ```
 
 Both builds are aarch64 for glibc 2.28, for the Cortex-A53. They link against a stand-in
 `libSDL2-2.0.so.0` made by `tools/mksdlstub.py`; the device's own SDL2 is used at run time.
-`-DHI5_BRICKPRO` adds the sticks and makes the updater fetch the Brick Pro's zip.
+`-DHI5_BRICKPRO` adds the sticks and makes the updater fetch the Brick Pro's packages.
+
+The same binaries go into both firmwares' packages. At run time the app reads MustardOS's
+"muOS-Keys" controller when it is there (its numbering is MustardOS's own, from its
+`device/tui-brick*` controller maps) and TrimUI OS's controller otherwise. It updates from the
+MustardOS package when its folder has `mux_launch.sh` (`dist/mustardos/`), which only that
+package carries.
 
 `src/font_data.h` and `dist/HI5/icon.png` are generated files. The scripts that make them
 are `tools/mkfont.py` (from Noto Sans Mono Bold) and `tools/mkicon.py`.
@@ -186,8 +250,9 @@ The app compares it with the release tag to decide whether it's out of date, so 
 refuses a tag that doesn't match (`make version` prints it). Then push the tag (`git tag v0.1.0
 && git push origin v0.1.0`), or run the workflow from the Actions tab with the tag in
 `release_tag`. Releases are full releases marked Latest, since the updater and `install.sh` read
-GitHub's latest release, and that skips pre-releases. They have `HI5-brick.zip` and
-`HI5-brickpro.zip` attached and `.github/release-notes.md` as their notes.
+GitHub's latest release, and that skips pre-releases. They have `HI5-brick.zip`,
+`HI5-brickpro.zip`, `HI5-mustardos-brick.muxapp` and `HI5-mustardos-brickpro.muxapp` attached and
+`.github/release-notes.md` as their notes.
 
 `build/hi5_update APP_DIR [--force]` (built by `make update-test`) checks for a newer release
 and installs it into `APP_DIR`, the way the app does. Point `HI5_UPDATE_API` at
@@ -210,6 +275,7 @@ in statically.
 | `src/update.c`, `src/net.c` | Self-update: GitHub's latest release, the download and unzip; HTTPS |
 | `src/main_trimui.c` | Device entry point (SDL2: video scaled 1.6x, buttons, sticks, USB audio) |
 | `src/midi.c` | USB MIDI clock in and out (ALSA raw MIDI) |
+| `src/perflog.c` | The performance log in `log.txt` (shared with RadioScan) |
 | `src/main_test.c` | Host test harness |
 | `src/main_synctest.c` | Host sync interop test |
 | `src/main_update.c` | Host updater (`build/hi5_update`) for tests |
@@ -217,7 +283,8 @@ in statically.
 | `tools/fake_github.py`, `tools/update_test.sh` | A local GitHub stand-in and the update test |
 | `tools/mbedtls.mk` | Builds Mbed TLS for each toolchain |
 | `tools/mksdlstub.py` | The stand-in SDL2 library to link against |
-| `dist/HI5/` | The app folder as installed on the card |
+| `dist/HI5/` | The app folder as installed on the card (`sysinfo.sh`: the system report) |
+| `dist/mustardos/` | What the MustardOS package adds: `mux_launch.sh`, `wake_screen.sh`, the list glyph |
 
 ## License
 

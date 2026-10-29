@@ -1,16 +1,33 @@
-HI5, a 5-voice FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro (TrimUI OS).
+HI5, a 5-voice FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro (TrimUI OS and
+MustardOS).
 
-**Install**
+**Install on MustardOS**
+
+Copy `HI5-mustardos-brick.muxapp` (Brick, Brick Hammer) or `HI5-mustardos-brickpro.muxapp` (Brick Pro) into
+the `ARCHIVE` folder of the first SD card, install it from **Applications → Archive Manager**, then open
+**Applications → HI5**. Press MENU to quit.
+
+**Install on TrimUI OS**
 
 Unzip `HI5-brick.zip` (Brick, Brick Hammer) or `HI5-brickpro.zip` (Brick Pro) at the root of the SD card
 (it contains `Apps/HI5/`), then open **Apps → HI5**. Press MENU to quit.
 
-Or, with the TrimUI's SSH server on, run this on a computer on the same network (add `HI5_DEVICE=brickpro`
-before `bash` the first time on a Brick Pro):
+Or, on either firmware, with the TrimUI's SSH server on, run this on a computer on the same network (on TrimUI
+OS, add `HI5_DEVICE=brickpro` before `bash` the first time on a Brick Pro):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
 ```
+
+**New: MustardOS, and logs for tuning**
+- Packages for MustardOS on the Brick, Brick Hammer and Brick Pro, installed from the Archive Manager. The app
+  reads MustardOS's controller, so every button (and the Brick Pro's sticks) works as on TrimUI OS, and it
+  updates itself from the MustardOS package.
+- The screen no longer stays dark on a Brick Pro under MustardOS, and the loading screen stays up while the
+  samples load.
+- `log.txt` now has a performance line every 10 s (audio load, dropouts, the screen, the processor's clock and
+  temperature) with hints on what to change, and `sysinfo.txt` a report of the system. `HI5_LOG=2` in
+  `launch.sh` logs every second and every button press.
 
 **New on TrimUI**
 - Ported from the Miyoo Mini Plus (HI5 0.0.11): the same voices, sequencer, FX and sound, on SDL2, the pages
@@ -23,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/instal
 - **USB audio:** a USB sound card or DAC takes over the output while it is plugged in.
 - **Brick Pro:** the left stick closes the L2 filter by hand; the right stick plays FX slots 1-4; L3 taps
   the tempo, R3 cycles the L2 sweep rate.
-- **Updates itself** from this repo's releases, each device fetching its own zip.
+- **Updates itself** from this repo's releases, each device and firmware fetching its own package.
 
-If you hear crackles, set `HI5_BUFFER=1024` in `Apps/HI5/launch.sh`. The log is written to
-`Apps/HI5/log.txt`.
+If you hear crackles, set `HI5_BUFFER=1024` in `launch.sh` in the app folder (`Apps/HI5` on TrimUI OS,
+`MUOS/application/HI5` on MustardOS). The logs are written to `log.txt` and `sysinfo.txt` in the same folder.
