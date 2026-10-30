@@ -25,8 +25,8 @@ SDL_INC := third_party/SDL2-2.30.9-headers
 SRC    := src/engine.c src/ui.c src/gfx.c src/sync.c src/aclock.c
 HDR    := src/engine.h src/ui.h src/gfx.h src/sync.h src/aclock.h src/font_data.h src/update.h
 NET    := src/net.c src/update.c # the self-updater, on the device and in build/hi5_update
-PLAT   := src/midi.c src/perflog.c src/main_trimui.c
-PLATH  := src/midi.h src/net.h src/perflog.h
+PLAT   := src/midi.c src/perflog.c src/ringleds.c src/main_trimui.c
+PLATH  := src/midi.h src/net.h src/perflog.h src/ringleds.h
 CFLAGS := -O2 -std=gnu11 -Wall -Wextra -fno-math-errno
 APP    := dist/HI5
 VERSION := $(shell sed -n 's/^\#define HI5_VERSION "\([^"]*\)".*/\1/p' src/engine.h)
@@ -87,9 +87,9 @@ build/brickpro/hi5: $(SRC) $(NET) $(PLAT) $(HDR) $(PLATH) build/sdl2/libSDL2-2.0
 	@mkdir -p build/brickpro
 	$(DEVICE_CC) -DHI5_BRICKPRO -o $@ $(SRC) $(NET) $(PLAT) $(DEVICE_LINK)
 
-build/hi5_test: $(SRC) src/midi.c src/perflog.c src/main_test.c $(HDR) src/midi.h src/perflog.h
+build/hi5_test: $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c $(HDR) src/midi.h src/perflog.h src/ringleds.h
 	@mkdir -p build
-	cc $(CFLAGS) -o $@ $(SRC) src/midi.c src/perflog.c src/main_test.c -lm -lpthread
+	cc $(CFLAGS) -o $@ $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c -lm -lpthread
 
 test: build/hi5_test
 	@mkdir -p build/test

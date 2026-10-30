@@ -144,6 +144,22 @@ go, and nothing they do is saved.
 
 R2 + the d-pad wins over the right stick while both are held.
 
+### The Brick Pro's lights
+
+While HI5 runs on the Brick Pro it drives the lights one by one:
+
+| Lights | Show |
+| --- | --- |
+| left stick's ring | Points where the left stick is pushed, in the filter's blue: the further, the brighter |
+| right stick's ring | Points where the right stick is pushed, in the colour of the FX it plays (REPEAT orange, TAPESTOP red, REVERSE violet, CRUSH amber, GATE green, DELAY blue, GRAIN pink) |
+| top bar | A stereo level meter of the output, from the centre out: the left channel to the left, the right to the right, green rising to amber and red near full scale |
+| under L1, L2, R1, R2 | The beat while playing: a flash each quarter note, orange on the bar's first |
+| F1, F2 | Dark |
+
+When HI5 closes, the lights go back to how they were (colours, effects, brightness). Settings
+in `launch.sh`: `HI5_LEDS=0` leaves the lights alone, `HI5_LED_BAR=0` keeps the top bar dark,
+`HI5_LED_BRIGHTNESS=1..60` (60 by default).
+
 ## USB: MIDI clock and audio
 
 The Brick has two USB-C ports: the top one is the USB host port, the bottom one charges. Plug
@@ -289,6 +305,7 @@ in statically.
 | `src/main_trimui.c` | Device entry point (SDL2: video scaled 1.6x, buttons, sticks, USB audio) |
 | `src/midi.c` | USB MIDI clock in and out (ALSA raw MIDI) |
 | `src/perflog.c` | The performance log in `log.txt` (shared with RadioScan) |
+| `src/ringleds.c` | The Brick Pro's lights, one by one (shared with RadioScan) |
 | `src/main_test.c` | Host test harness |
 | `src/main_synctest.c` | Host sync interop test |
 | `src/main_update.c` | Host updater (`build/hi5_update`) for tests |

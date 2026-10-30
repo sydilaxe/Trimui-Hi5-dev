@@ -30,6 +30,7 @@
 #include "midi.h"
 #include "net.h"
 #include "perflog.h"
+#include "ringleds.h"
 #include "sync.h"
 #include "ui.h"
 #include "update.h"
@@ -89,6 +90,7 @@ static void audio_cb(void *ud, Uint8 *stream, int len)
     engine_render((int16_t *)stream, len / 4);
     aclock_made(len / 4, engine_position(), engine_steps_per_frame());
     perf_audio_output((const int16_t *)stream, len / 4); /* JUMP: a click made here */
+    ringleds_audio((const int16_t *)stream, len / 4);   /* the Brick Pro's top bar meter */
     perf_audio_end(t0);
 }
 
@@ -399,6 +401,28 @@ static void sticks_apply(void)
     }
 }
 #endif
+
+/* the Brick Pro's LEDs (ringleds.h): the left ring in the filter's blue
+ * points with the left stick; the right ring with the right stick, in the
+ * colour of the FX it plays; the top bar the output's level; the shoulders
+ * the beat */
+static void leds_update(void)
+{
+    float lx = 0, ly = 0, rx = 0, ry = 0;
+    uint32_t rcol = 0xb4b4b4;
+#ifdef HI5_BRICKPRO
+    /* by FX type: REPEAT, TAPESTOP, REVERSE, CRUSH, GATE, DELAY, GRAIN */
+    static const uint32_t fx_col[NFXT] = {0xff6414, 0xff2030, 0xb478ff, 0xffb428, 0x30e0a0, 0x3080ff, 0xff60c0};
+    lx = stick[AX_LX], ly = -stick[AX_LY], rx = stick[AX_RX], ry = -stick[AX_RY]; /* the rings' y is up */
+    float ax = fabsf(rx), ay = fabsf(ry);
+    if (ax > 0.f || ay > 0.f) {
+        int slot = ay >= ax ? (ry > 0.f ? BTN_UP : BTN_DOWN) : (rx < 0.f ? BTN_LEFT : BTN_RIGHT);
+        int t = song.fx[slot].type;
+        rcol = t >= 0 && t < NFXT ? fx_col[t] : rcol;
+    }
+#endif
+    ringleds_update(lx, ly, 0x46b4ff, rx, ry, rcol, live.playing, live.step, song.bpm, 0, 0);
+}
 
 static void open_joysticks(void)
 {
@@ -748,6 +772,13 @@ int main(int argc, char **argv)
 
     joy_map_default();
     open_joysticks();
+#ifdef HI5_BRICKPRO
+    int brickpro = 1;
+#else
+    int brickpro = 0;
+#endif
+    if (ringleds_open("HI5", brickpro))
+        perf_log("START", "LEDs: the Brick Pro's rings, top bar and shoulders");
 
     int have_audio = open_output(pick_output(), 0);
     if (have_audio) {
@@ -809,6 +840,7 @@ int main(int argc, char **argv)
         present();
         perf_frame(now_us() - f0);
         perf_tick();
+        leds_update();
 
         if (now - last_save > 15000) {
             last_save = now;
@@ -821,6 +853,7 @@ int main(int argc, char **argv)
     }
 
     song_save(SAVE_PATH);
+    ringleds_close();
     perf_close();
     midi_stop();
     sync_close();
