@@ -88,6 +88,7 @@ static void audio_cb(void *ud, Uint8 *stream, int len)
     aclock_request(t0, len / 4);
     engine_render((int16_t *)stream, len / 4);
     aclock_made(len / 4, engine_position(), engine_steps_per_frame());
+    perf_audio_output((const int16_t *)stream, len / 4); /* JUMP: a click made here */
     perf_audio_end(t0);
 }
 
@@ -156,6 +157,9 @@ static int open_output_locked(const char *name, int start)
     }
     snprintf(dev_name, sizeof dev_name, "%s", name ? name : "");
     perf_audio_open(rate, have.samples, name);
+    /* which way the sound goes (on MustardOS: PipeWire, or ALSA through PipeWire's plugin), and what the device took */
+    perf_log("AUDIO", "SDL %s driver: %d Hz, %d channels, format 0x%x, %d frames a buffer", SDL_GetCurrentAudioDriver(),
+             have.freq, (int)have.channels, (unsigned)have.format, (int)have.samples);
     if (start)
         SDL_PauseAudioDevice(dev, 0);
     return 1;
