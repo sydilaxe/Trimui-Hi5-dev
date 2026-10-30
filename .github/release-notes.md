@@ -25,6 +25,13 @@ curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/instal
 - After MustardOS's screen wake the app makes its renderer again, and it rebuilds the picture whenever SDL reports
   it lost or drawing fails. The log's `SCREEN` lines record each rebuild.
 
+**New: the important settings by MIDI CC**
+- The voice, mixer, pattern and play settings that matter most each have a MIDI CC, on any channel: CC 2 chooses
+  the voice, 14-24 set its params, 25-30 its level, pan, drive, send, mute and solo, 85-90 the tempo and bus
+  (BPM, MASTER, MASTER DRIVE, REVERB type, time and tone), 102-113 its HIT, STUT and GLITCH cells, 114-115 the
+  pattern slot and the kit.
+- `docs/MIDI.md` is the MIDI implementation chart.
+
 **New: MustardOS, and logs for tuning**
 - Packages for MustardOS on the Brick, Brick Hammer and Brick Pro, installed from the Archive Manager. The app
   reads MustardOS's controller, so every button (and the Brick Pro's sticks) works as on TrimUI OS, and it
