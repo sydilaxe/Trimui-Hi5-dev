@@ -419,6 +419,8 @@ static void open_joysticks(void)
     }
 }
 
+static int screen_reset; /* set by SDL's reset events: 1 the picture, 2 the renderer and picture */
+
 static void on_event(const SDL_Event *e)
 {
     switch (e->type) {
@@ -488,6 +490,11 @@ static void on_event(const SDL_Event *e)
         if (!e->adevice.iscapture)
             audio_hotplug();
         break;
+    case SDL_RENDER_TARGETS_RESET:
+    case SDL_RENDER_DEVICE_RESET:
+        perf_log("SCREEN", "SDL says the %s was reset", e->type == SDL_RENDER_DEVICE_RESET ? "renderer" : "picture");
+        screen_reset = e->type == SDL_RENDER_DEVICE_RESET ? 2 : (screen_reset ? screen_reset : 1);
+        break;
     case SDL_QUIT:
         got_signal = 1;
         break;
@@ -496,11 +503,54 @@ static void on_event(const SDL_Event *e)
 
 /* ------------------------------------------------------------- screen */
 
+/* A display that is switched off and on (wake_screen.sh does that, as waking
+ * from sleep does) can take the renderer's picture with it: SDL then reports
+ * a reset, or drawing fails, and the screen stays black while the app runs
+ * on. So the texture (or the renderer and texture) is made again when SDL
+ * says so, when drawing fails, and once after the screen wake has had time to
+ * finish (HI5_SCREEN_REBUILD=0: not). Each is logged. As in Jaffedrone.
+ * The picture is sent opaque (alpha 255): on MustardOS the display shows the
+ * screen's alpha, and the page's colours have none of their own. */
+static SDL_Window *win;
 static SDL_Renderer *ren;
 static SDL_Texture *tex;
 static SDL_Rect dst;
 static int rot;
 static uint32_t fb[SCREEN_W * SCREEN_H];
+static int draw_fails;
+static Uint32 last_rebuild;
+
+static void make_renderer(void)
+{
+    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    if (!ren)
+        ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
+}
+
+static void make_texture(void)
+{
+    tex = ren ? SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H)
+              : NULL;
+    if (tex) /* copied as it is, alpha and all (the pixels are opaque) */
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
+}
+
+static void screen_rebuild(int renderer, const char *why)
+{
+    if (tex)
+        SDL_DestroyTexture(tex);
+    tex = NULL;
+    if (renderer) {
+        if (ren)
+            SDL_DestroyRenderer(ren);
+        ren = NULL;
+        make_renderer();
+    }
+    make_texture();
+    last_rebuild = SDL_GetTicks();
+    perf_log("SCREEN", "%s made again (%s)%s%s", renderer ? "renderer and picture" : "picture", why,
+             tex ? "" : ": failed, ", tex ? "" : SDL_GetError());
+}
 
 /* HI5_SCREEN_WAKE: a command to run once the window is on show. MustardOS's
  * mux_launch.sh points it at wake_screen.sh: the screen can stay dark when an
@@ -508,6 +558,7 @@ static uint32_t fb[SCREEN_W * SCREEN_H];
  * again, so the script does what waking does. Run in the background (a double
  * fork, so nothing is left to reap), never waited for. */
 #define SCREEN_WAKE_FRAME 10 /* about a third of a second of frames */
+#define SCREEN_REBUILD_AFTER 75 /* frames after the wake: 2.5 s, past its second pass */
 static void screen_wake(void)
 {
     const char *cmd = getenv("HI5_SCREEN_WAKE");
@@ -517,6 +568,10 @@ static void screen_wake(void)
     pid_t p = fork();
     if (p == 0) {
         if (fork() == 0) {
+            /* a script's own path is run as a file, so a space in the
+             * app's folder can't split it */
+            if (access(cmd, R_OK) == 0)
+                execl("/bin/sh", "sh", cmd, (char *)NULL);
             execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
             _exit(127);
         }
@@ -529,13 +584,38 @@ static void screen_wake(void)
 static void present(void)
 {
     static int frames;
-    SDL_UpdateTexture(tex, NULL, fb, SCREEN_W * 4);
-    SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
-    SDL_RenderClear(ren);
-    SDL_RenderCopyEx(ren, tex, NULL, &dst, rot, NULL, SDL_FLIP_NONE);
-    SDL_RenderPresent(ren);
+    /* opaque: the page is drawn with the alpha byte left at 0, and SDL copies
+     * it to the screen as it is. MustardOS's display shows the screen's
+     * alpha, so a picture with alpha 0 is black there (TrimUI OS ignores it). */
+    for (int i = 0; i < SCREEN_W * SCREEN_H; i++)
+        fb[i] |= 0xff000000u;
+    if (screen_reset) {
+        screen_rebuild(screen_reset == 2, "SDL reset it");
+        screen_reset = 0;
+    }
+    int bad = !tex || SDL_UpdateTexture(tex, NULL, fb, SCREEN_W * 4) < 0;
+    if (ren) {
+        SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+        SDL_RenderClear(ren);
+        bad |= !tex || SDL_RenderCopyEx(ren, tex, NULL, &dst, rot, NULL, SDL_FLIP_NONE) < 0;
+        SDL_RenderPresent(ren);
+    }
+    else
+        bad = 1;
+    if (bad) {
+        if (draw_fails++ < 5)
+            perf_log("SCREEN", "drawing failed: %s", SDL_GetError());
+        /* at most once a second: the texture first, then everything */
+        if (SDL_GetTicks() - last_rebuild > 1000)
+            screen_rebuild(draw_fails > 2 || !ren, "drawing failed");
+    }
     if (++frames == SCREEN_WAKE_FRAME)
         screen_wake();
+    /* the wake has finished (it runs twice, a second apart): the renderer is
+     * made again in case the display took its picture with it */
+    const char *wake = getenv("HI5_SCREEN_WAKE");
+    if (frames == SCREEN_WAKE_FRAME + SCREEN_REBUILD_AFTER && wake && *wake && env_int("HI5_SCREEN_REBUILD", 1))
+        screen_rebuild(1, "after the screen wake");
 }
 
 /* The samples load on their own thread while the main one keeps the loading
@@ -611,13 +691,11 @@ int main(int argc, char **argv)
     int sw = 1024, sh = 768;
     if (SDL_GetCurrentDisplayMode(0, &dm) == 0 && dm.w > 0 && dm.h > 0)
         sw = dm.w, sh = dm.h;
-    SDL_Window *win = SDL_CreateWindow("HI5", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sw, sh,
-                                       SDL_WINDOW_SHOWN | (env_int("HI5_WINDOWED", 0) ? 0 : SDL_WINDOW_FULLSCREEN));
-    ren = win ? SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED) : NULL;
-    if (win && !ren)
-        ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
-    tex = ren ? SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H)
-              : NULL;
+    win = SDL_CreateWindow("HI5", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sw, sh,
+                           SDL_WINDOW_SHOWN | (env_int("HI5_WINDOWED", 0) ? 0 : SDL_WINDOW_FULLSCREEN));
+    if (win)
+        make_renderer();
+    make_texture();
     if (!tex) {
         fprintf(stderr, "video: %s\n", SDL_GetError());
         SDL_Quit();
