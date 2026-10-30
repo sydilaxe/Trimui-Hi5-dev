@@ -19,6 +19,12 @@ OS, add `HI5_DEVICE=brickpro` before `bash` the first time on a Brick Pro):
 curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
 ```
 
+**Fix: the black screen on MustardOS**
+- The picture is now sent to the screen opaque. Its pixels went out with their alpha (transparency) at 0, which
+  TrimUI OS ignores but MustardOS's display shows, so on MustardOS nothing the app drew was visible.
+- After MustardOS's screen wake the app makes its renderer again, and it rebuilds the picture whenever SDL reports
+  it lost or drawing fails. The log's `SCREEN` lines record each rebuild.
+
 **Fix: a loud click when the mix ran hot**
 - With MASTER DRIVE up, the master's make-up gain could lift a sample past full scale, and it wrapped round to the
   other side: a loud click. The output is now held to full scale.
