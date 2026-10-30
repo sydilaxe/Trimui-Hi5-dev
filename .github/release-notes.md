@@ -19,6 +19,13 @@ OS, add `HI5_DEVICE=brickpro` before `bash` the first time on a Brick Pro):
 curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/install.sh | bash
 ```
 
+**New: the Brick Pro's lights follow the music**
+- Each stick's ring points where the stick is pushed: the left in the filter's blue, the right in the colour of
+  the FX it plays. The top bar is a stereo level meter of the output, and the lights under L1, L2, R1 and R2
+  flash on the beat.
+- When HI5 closes the lights go back to how they were. In `launch.sh`, `HI5_LEDS=0` leaves them alone,
+  `HI5_LED_BAR=0` keeps the top bar dark and `HI5_LED_BRIGHTNESS=1..60` sets their brightness.
+
 **Fix: the black screen on MustardOS**
 - The picture is now sent to the screen opaque. Its pixels went out with their alpha (transparency) at 0, which
   TrimUI OS ignores but MustardOS's display shows, so on MustardOS nothing the app drew was visible.
