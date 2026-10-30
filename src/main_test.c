@@ -262,6 +262,11 @@ static void sim_sync(int echo, double *mean_ms, double *worst_ms, float *delay)
 
 int main(int argc, char **argv)
 {
+    if (argc > 1 && !strcmp(argv[1], "--midi-chart")) { /* the CC table of docs/MIDI.md */
+        song_default();
+        ui_midi_chart(stdout);
+        return 0;
+    }
     const char *out = argc > 1 ? argv[1] : ".";
     srand(1);
     song_default();
@@ -691,6 +696,32 @@ int main(int argc, char **argv)
         printf("midi clock in: START plays %d from the first step %d, 120 BPM -> %.1f (%d), "
                "phase within %.3f steps (want under 0.1: %d), STOP stops %d\n",
                started, first, bpm_in, fabsf(bpm_in - 120.f) < 0.5f && following, worst, worst < 0.1, !live.playing);
+
+        { /* MIDI CC: the hat chosen, its first param, its HIT cell, the tempo, a mute */
+            song_default();
+            midi_reset();
+            uint8_t m[3] = {0xb9, 2, 127}; /* channel 10: any channel is heard */
+            int mch, mcc, mv, n = 0;
+            midi_feed(m, 3, 1000);
+            m[1] = 14, m[2] = 0;
+            midi_feed(m, 3, 2000);
+            m[1] = 103, m[2] = 127; /* HIT steps: 16 */
+            midi_feed(m, 3, 3000);
+            m[1] = 85, m[2] = 127;  /* BPM: 250 */
+            midi_feed(m, 3, 4000);
+            m[1] = 29, m[2] = 127;  /* muted */
+            midi_feed(m, 3, 5000);
+            m[1] = 7, m[2] = 100;   /* not one of ours */
+            midi_feed(m, 3, 6000);
+            while (midi_take_cc(&mch, &mcc, &mv))
+                n += ui_midi_cc(mch, mcc, mv);
+            int ok = n == 5 && song.param[V_HAT][0] == param_def(V_HAT, 0)->min &&
+                     song.cell[V_HAT][ROW_HIT].steps == MAX_STEPS && song.bpm == 250.f && song.mute[V_HAT] &&
+                     !song.mute[V_SUB];
+            printf("midi cc: hat chosen, its first param at the bottom, HIT 16 steps, BPM 250, muted, CC7 not ours: %d\n", ok);
+            song_default();
+            midi_reset();
+        }
 
         song_default();
         song.bpm = 120.f;

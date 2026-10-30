@@ -106,6 +106,10 @@ jobs:
           grep -q "^update prompt: shown 1, A installs 1, B closes it 1, pattern untouched 1" $r
           # USB MIDI clock and the Brick Pro's sticks
           grep -q "^midi clock in: START plays 1 from the first step 1, 120 BPM -> .* (1), phase within .* (want under 0.1: 1), STOP stops 1" $r
+          grep -q "^midi cc: .*CC7 not ours: 1$" $r
+          # the MIDI chart's CC table is the one the app uses
+          build/hi5_test --midi-chart > cc.md
+          sed -n '/<!-- cc table -->/,/<!-- end cc table -->/p' docs/MIDI.md | sed '1d;$d' | diff cc.md -
           grep -q "^midi clock out: START 1, .*(want 192: 1), STOP 1" $r
           grep -q "^perflog: .*(want 0, 1, 1: 1)" $r
           grep -q "^perflog jumps: .*(want 0 1 0 0 0: 1)" $r
