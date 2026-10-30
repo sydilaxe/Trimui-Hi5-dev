@@ -31,6 +31,7 @@ Where the code comes from:
   (`sysinfo.txt`), shared with RadioScan (`sysinfo.sh` with Jaffedrone too); keep the copies the same.
   The audio callback only calls `perf_audio_begin` / `perf_audio_end`. When you add a setting that
   changes performance, give the HINT lines a word on it.
+- `src/ringleds.c`: the Brick Pro's lights one by one (shared with RadioScan; keep the copies the same).
 
 When you change a control or a screen, update the README's Controls section (and the Brick Pro
 table for the sticks) and the footer hints in `src/ui.c`. When you change the engine, run `make
