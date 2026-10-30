@@ -19,6 +19,12 @@ OS, add `HI5_DEVICE=brickpro` before `bash` the first time on a Brick Pro):
 curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
 ```
 
+**Fix: the black screen on MustardOS**
+- The picture is now sent to the screen opaque. Its pixels went out with their alpha (transparency) at 0, which
+  TrimUI OS ignores but MustardOS's display shows, so on MustardOS nothing the app drew was visible.
+- After MustardOS's screen wake the app makes its renderer again, and it rebuilds the picture whenever SDL reports
+  it lost or drawing fails. The log's `SCREEN` lines record each rebuild.
+
 **New: the important settings by MIDI CC**
 - The voice, mixer, pattern and play settings that matter most each have a MIDI CC, on any channel: CC 2 chooses
   the voice, 14-24 set its params, 25-30 its level, pan, drive, send, mute and solo, 85-90 the tempo and bus
