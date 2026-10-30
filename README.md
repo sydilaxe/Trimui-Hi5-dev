@@ -157,6 +157,10 @@ gives about 500 mA, so a device that draws more needs a powered hub.
 - **MIDI clock in:** the tempo follows it, and its phase is held by trimming the playback speed, as
   Wi-Fi sync does. START plays from the first step, CONTINUE and song position pick up where they
   say, STOP stops.
+- **Settings by MIDI CC:** the important voice, mixer, pattern and play settings each have a CC, on
+  any channel: CC 2 chooses the voice, 14-24 its params, 25-30 its level, pan, drive, send, mute and
+  solo, 85-90 the tempo and bus, 102-113 its HIT, STUT and GLITCH cells, 114-115 the pattern slot and
+  the kit. [docs/MIDI.md](docs/MIDI.md) is the full MIDI implementation chart.
 - **Audio:** a USB sound card or DAC takes the output while it is plugged in, and the speaker and
   headphones take it back when it is unplugged.
 
