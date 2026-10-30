@@ -834,6 +834,44 @@ int main(int argc, char **argv)
         printf("perflog: dropouts steady %d, after a 60 ms stall %d, steady again %d (want 0, 1, 1: %d)\n", steady,
                stall, after, steady == 0 && stall == 1 && after == 1);
     }
+    { /* JUMP: a click in a clean tone is found; a tone, a square wave, a crushed tone and HI5's own beat are not */
+        static int16_t b[48000 * 2];
+        unsigned seg[5];
+        for (int k = 0; k < 4; k++) {
+            for (int i = 0; i < 48000; i++) {
+                double ph = 2 * M_PI * 220.0 * i / 48000.0, x = k == 2 ? (sin(ph) > 0 ? 0.5 : -0.5) : 0.4 * sin(ph);
+                if (k == 3)
+                    x = floor(x * 8.0) / 8.0;
+                if (k == 1 && i == 30000)
+                    x += 0.5;
+                b[i * 2] = b[i * 2 + 1] = (int16_t)(x * 32767);
+            }
+            if (k >= 2)
+                perf_audio_output(b, 48000); /* a second of it first: the switch to it is a jump of its own */
+            unsigned before = perf_jumps();
+            perf_audio_output(b, 48000);
+            seg[k] = perf_jumps() - before;
+        }
+        song_default();
+        engine_init(RATE);
+        engine_set_playing(1);
+        for (int i = 0; i < 4; i++) /* settle */
+            engine_render(b, 512), perf_audio_output(b, 512);
+        unsigned before = perf_jumps();
+        static int16_t beat[20 * RATE * 2];
+        for (int i = 0; i < 20 * RATE / 512; i++) {
+            engine_render(b, 512);
+            perf_audio_output(b, 512);
+            memcpy(beat + i * 1024, b, 1024 * sizeof b[0]);
+        }
+        snprintf(path, sizeof path, "%s/jumpbeat.wav", out);
+        write_wav(path, beat, 20 * RATE / 512 * 512);
+        seg[4] = perf_jumps() - before;
+        engine_set_playing(0);
+        printf("perflog jumps: tone %u, tone with a click %u, square %u, crushed %u, 20 s of the beat %u "
+               "(want 0 1 0 0 0: %d)\n", seg[0], seg[1], seg[2], seg[3], seg[4],
+               seg[0] == 0 && seg[1] == 1 && seg[2] == 0 && seg[3] == 0 && seg[4] == 0);
+    }
     free(pcm);
     return 0;
 }

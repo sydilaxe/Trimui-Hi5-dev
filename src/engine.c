@@ -1319,8 +1319,11 @@ void engine_render(int16_t *out, int frames)
             L = song.clk_side ? c : mono;
             R = song.clk_side ? mono : c;
         }
-        out[2 * n] = (int16_t)(L * 32000.f);
-        out[2 * n + 1] = (int16_t)(R * 32000.f);
+        /* held to 16 bits: past full scale a sample would wrap round to the
+         * other side (a loud click) where the master's make-up gain lifts the
+         * soft clip's ceiling */
+        out[2 * n] = (int16_t)(fminf(1.02f, fmaxf(-1.02f, L)) * 32000.f);
+        out[2 * n + 1] = (int16_t)(fminf(1.02f, fmaxf(-1.02f, R)) * 32000.f);
     }
 
     for (int v = 0; v <= NV; v++) {

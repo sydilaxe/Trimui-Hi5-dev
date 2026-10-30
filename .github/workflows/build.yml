@@ -112,6 +112,7 @@ jobs:
           sed -n '/<!-- cc table -->/,/<!-- end cc table -->/p' docs/MIDI.md | sed '1d;$d' | diff cc.md -
           grep -q "^midi clock out: START 1, .*(want 192: 1), STOP 1" $r
           grep -q "^perflog: .*(want 0, 1, 1: 1)" $r
+          grep -q "^perflog jumps: .*(want 0 1 0 0 0: 1)" $r
           grep -q "^stick: .*(darker: 1), .*(open again: 1); fx: stick 1, R2 first 1, back 1, insert 1, off 1" $r
       - name: Wi-Fi sync between two units over UDP
         run: |

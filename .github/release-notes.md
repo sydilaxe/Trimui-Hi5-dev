@@ -32,6 +32,19 @@ curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/instal
   pattern slot and the kit.
 - `docs/MIDI.md` is the MIDI implementation chart.
 
+**Fix: a loud click when the mix ran hot**
+- With MASTER DRIVE up, the master's make-up gain could lift a sample past full scale, and it wrapped round to the
+  other side: a loud click. The output is now held to full scale.
+
+**New: deeper logs, to find clicks and tune the app**
+- `log.txt` adds a **PROC** line every 10 s: the processor's time by thread (the audio thread marked), memory and
+  its peak, page faults, free memory, and how often the audio thread was preempted.
+- **JUMP** lines: HI5 watches its own output for clicks and logs each with its time (it found the one above). A
+  click heard with no JUMP and no dropout comes from after the app, in the sound server.
+- STAT counts late audio calls (dropout or not) and jumps; the log names SDL's audio driver and what the device took.
+- `sysinfo.txt` records the sound path: PipeWire's devices, rate and quantum, the mixer, and every 10 s PipeWire's
+  nodes with their xrun (ERR) counts.
+
 **New: MustardOS, and logs for tuning**
 - Packages for MustardOS on the Brick, Brick Hammer and Brick Pro, installed from the Archive Manager. The app
   reads MustardOS's controller, so every button (and the Brick Pro's sticks) works as on TrimUI OS, and it
