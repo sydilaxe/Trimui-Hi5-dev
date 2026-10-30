@@ -2,7 +2,7 @@
 # Install or update HI5 on a TrimUI Brick, Brick Hammer or Brick Pro, running TrimUI OS or
 # MustardOS. Run it on a computer on the same network as the TrimUI:
 #
-#   curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/install.sh | bash
 #
 # It finds the TrimUI over SSH (the firmware's SSH server must be on), compares the installed
 # version with the latest GitHub release, and copies the new build there if the release is newer:

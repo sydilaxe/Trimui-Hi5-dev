@@ -16,7 +16,7 @@ Or, on either firmware, with the TrimUI's SSH server on, run this on a computer 
 OS, add `HI5_DEVICE=brickpro` before `bash` the first time on a Brick Pro):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/install.sh | bash
 ```
 
 **Fix: the black screen on MustardOS**

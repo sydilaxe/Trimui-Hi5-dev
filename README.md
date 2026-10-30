@@ -60,7 +60,7 @@ With the TrimUI's SSH server on (on MustardOS, Secure Shell under Web Services),
 computer on the same network:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/install.sh | bash
 ```
 
 The script scans the local /24 for an SSH server (a handheld's dropbear first), checks the
