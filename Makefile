@@ -12,7 +12,8 @@
 #   make install SD=/path/to/card [DEVICE=brickpro] [OS=mustardos]
 #                 copy the app into SD/Apps/HI5 (or SD/MUOS/application/HI5)
 #   make update-test   install a fake release over a test app folder, the way the app updates itself
-#   make version  print HI5_VERSION (src/engine.h); releases are tagged v<version>
+#   make version  print the version built (HI5_VERSION in src/engine.h, or VERSION=x.y.z);
+#                 releases are tagged v<version>, and CI builds them with VERSION from the tag
 #   make build/hi5_synctest   host-side Wi-Fi sync interop check (run alongside another unit)
 #
 # zig: ZIG=/path/to/zig, or `pip install ziglang==0.14.1` (used as `python3 -m ziglang`)
@@ -29,14 +30,22 @@ PLAT   := src/midi.c src/perflog.c src/ringleds.c src/main_trimui.c
 PLATH  := src/midi.h src/net.h src/perflog.h src/ringleds.h
 CFLAGS := -O2 -std=gnu11 -Wall -Wextra -fno-math-errno
 APP    := dist/HI5
-VERSION := $(shell sed -n 's/^\#define HI5_VERSION "\([^"]*\)".*/\1/p' src/engine.h)
+# the app's version: HI5_VERSION in src/engine.h, or VERSION=x.y.z (CI passes the release tag's)
+VERSION ?= $(shell sed -n 's/^\#define HI5_VERSION "\([^"]*\)".*/\1/p' src/engine.h)
+VERDEF := -DHI5_VERSION='"$(VERSION)"'
 MAGICK := $(shell command -v magick 2>/dev/null || echo convert)
 
 all: build/brick/hi5 build/brickpro/hi5 $(APP)/icon.png $(APP)/VERSION $(APP)/LICENSE-mbedtls.txt
 
+# changes only when the version does, so a new VERSION= rebuilds what has it compiled in
+build/version: FORCE
+	@mkdir -p build
+	@test "$$(cat $@ 2>/dev/null)" = "$(VERSION)" || echo $(VERSION) > $@
+FORCE:
+
 # read by install.sh to tell whether the device is up to date
-$(APP)/VERSION: src/engine.h
-	echo $(VERSION) > $@
+$(APP)/VERSION: build/version
+	cp $< $@
 
 src/font_data.h: tools/mkfont.py
 	python3 tools/mkfont.py /usr/share/fonts/google-noto/NotoSansMono-Bold.ttf $@
@@ -76,20 +85,20 @@ build/zig/libmbedtls.a: $(MBED_SRC)
 build/host/libmbedtls.a: $(MBED_SRC)
 	$(MAKE) -f tools/mbedtls.mk OUT=build/host MBED_DIR=$(MBED_DIR) CC=cc AR=ar MBED_CFLAGS=-O2
 
-DEVICE_CC = $(ZIG) cc -target $(TARGET) -mcpu=$(CPU) $(CFLAGS) -I$(SDL_INC) -I$(MBED_DIR)/include -Isrc
+DEVICE_CC = $(ZIG) cc -target $(TARGET) -mcpu=$(CPU) $(CFLAGS) $(VERDEF) -I$(SDL_INC) -I$(MBED_DIR)/include -Isrc
 DEVICE_LINK = build/zig/libmbedtls.a build/sdl2/libSDL2-2.0.so.0 -lm -lpthread -Wl,--allow-shlib-undefined -s
 
-build/brick/hi5: $(SRC) $(NET) $(PLAT) $(HDR) $(PLATH) build/sdl2/libSDL2-2.0.so.0 build/zig/libmbedtls.a
+build/brick/hi5: $(SRC) $(NET) $(PLAT) $(HDR) $(PLATH) build/version build/sdl2/libSDL2-2.0.so.0 build/zig/libmbedtls.a
 	@mkdir -p build/brick
 	$(DEVICE_CC) -o $@ $(SRC) $(NET) $(PLAT) $(DEVICE_LINK)
 
-build/brickpro/hi5: $(SRC) $(NET) $(PLAT) $(HDR) $(PLATH) build/sdl2/libSDL2-2.0.so.0 build/zig/libmbedtls.a
+build/brickpro/hi5: $(SRC) $(NET) $(PLAT) $(HDR) $(PLATH) build/version build/sdl2/libSDL2-2.0.so.0 build/zig/libmbedtls.a
 	@mkdir -p build/brickpro
 	$(DEVICE_CC) -DHI5_BRICKPRO -o $@ $(SRC) $(NET) $(PLAT) $(DEVICE_LINK)
 
-build/hi5_test: $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c $(HDR) src/midi.h src/perflog.h src/ringleds.h
+build/hi5_test: $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c $(HDR) src/midi.h src/perflog.h src/ringleds.h build/version
 	@mkdir -p build
-	cc $(CFLAGS) -o $@ $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c -lm -lpthread
+	cc $(CFLAGS) $(VERDEF) -o $@ $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c -lm -lpthread
 
 test: build/hi5_test
 	@mkdir -p build/test
@@ -97,12 +106,12 @@ test: build/hi5_test
 	cd build/test && for f in *.ppm; do $(MAGICK) $$f $${f%.ppm}.png && rm $$f; done
 
 # host-side Wi-Fi sync interop check: run two (or one beside a HI5, Columbia Street or Jaffedrone)
-build/hi5_synctest: $(SRC) src/main_synctest.c $(HDR)
+build/hi5_synctest: $(SRC) src/main_synctest.c $(HDR) build/version
 	@mkdir -p build
-	cc $(CFLAGS) -o $@ $(SRC) src/main_synctest.c -lm
+	cc $(CFLAGS) $(VERDEF) -o $@ $(SRC) src/main_synctest.c -lm
 
-build/hi5_update: $(NET) src/main_update.c src/engine.h src/net.h src/update.h build/host/libmbedtls.a
-	cc $(CFLAGS) -I$(MBED_DIR)/include -o $@ $(NET) src/main_update.c build/host/libmbedtls.a -lpthread
+build/hi5_update: $(NET) src/main_update.c src/engine.h src/net.h src/update.h build/version build/host/libmbedtls.a
+	cc $(CFLAGS) $(VERDEF) -I$(MBED_DIR)/include -o $@ $(NET) src/main_update.c build/host/libmbedtls.a -lpthread
 
 update-test: build/hi5_update
 	sh tools/update_test.sh
@@ -164,4 +173,4 @@ install: build/$(DEVICE)/hi5 $(APP)/icon.png $(APP)/VERSION $(APP)/LICENSE-mbedt
 clean:
 	rm -rf build $(APP)/VERSION $(APP)/LICENSE-mbedtls.txt
 
-.PHONY: all test update-test version package install clean
+.PHONY: FORCE all test update-test version package install clean
