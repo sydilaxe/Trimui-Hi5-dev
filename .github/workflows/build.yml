@@ -12,6 +12,11 @@ on:
         required: false
         default: ""
 
+# the release tag, when this run publishes one: a pushed v* tag, a release created on the
+# website, or a manual run with release_tag filled in (with or without the v)
+env:
+  RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
+
 jobs:
   trimui:
     name: TrimUI packages (Brick / Brick Hammer, Brick Pro; TrimUI OS and MustardOS)
@@ -26,8 +31,16 @@ jobs:
           # the scripts the device runs: launchers, the screen wake, the system report
           for s in dist/HI5/launch.sh dist/HI5/sysinfo.sh dist/mustardos/*.sh; do sh -n "$s"; done
           bash -n install.sh
-          make -j"$(nproc)" package
-          v=$(make -s version)
+          # a release is built as the tag's version (v0.3.0 -> 0.3.0), which the app compares
+          # with the latest release's tag to offer updates; otherwise HI5_VERSION in src/engine.h
+          if [ -n "$RELEASE_TAG" ]; then
+            v=${RELEASE_TAG#v}
+            echo "$v" | grep -Eqx '[0-9]+(\.[0-9]+)*' || { echo "::error::release tag $RELEASE_TAG isn't v<number>.<number>..."; exit 1; }
+          else
+            v=$(make -s version)
+          fi
+          echo "building version $v"
+          make -j"$(nproc)" package VERSION="$v"
           for d in brick brickpro; do
             z=build/HI5-$d.zip
             ls -l $z
@@ -70,6 +83,9 @@ jobs:
           strings build/brickpro/hi5 | grep -qx "/HI5-brickpro.zip"
           strings build/brick/hi5 | grep -qx "/HI5-mustardos-brick.muxapp"
           strings build/brickpro/hi5 | grep -qx "/HI5-mustardos-brickpro.muxapp"
+          # the version the binaries were built as, which the updater compares with the release
+          strings build/brick/hi5 | grep -qx "THIS IS V$v"
+          strings build/brickpro/hi5 | grep -qx "THIS IS V$v"
       - uses: actions/upload-artifact@v4
         with:
           name: HI5-trimui
@@ -140,20 +156,24 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Check the tag matches HI5_VERSION
-        env:
-          TAG: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
-        run: |
-          # the app compares the release tag with its own HI5_VERSION; a mismatch would offer the update forever
-          v=$(sed -n 's/^#define HI5_VERSION "\([^"]*\)".*/\1/p' src/engine.h)
-          [ "$TAG" = "v$v" ] || { echo "::error::tag $TAG doesn't match HI5_VERSION $v in src/engine.h"; exit 1; }
       - uses: actions/download-artifact@v4
         with:
           name: HI5-trimui
+      - name: Check the packages are the tag's version
+        run: |
+          # the trimui job built them as the tag's version; a mismatch would make the app offer
+          # this update forever. A manual run's tag may leave out the v.
+          TAG=v${RELEASE_TAG#v}
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          for d in brick brickpro; do
+            test "$(unzip -p HI5-$d.zip Apps/HI5/VERSION)" = "${TAG#v}" ||
+              { echo "::error::HI5-$d.zip isn't version ${TAG#v}"; exit 1; }
+            test "$(unzip -p HI5-mustardos-$d.muxapp "HI5/VERSION")" = "${TAG#v}" ||
+              { echo "::error::HI5-mustardos-$d.muxapp isn't version ${TAG#v}"; exit 1; }
+          done
       - name: Create the GitHub release with the TrimUI OS and MustardOS packages
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
         run: |
           files="HI5-brick.zip HI5-brickpro.zip HI5-mustardos-brick.muxapp HI5-mustardos-brickpro.muxapp"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
