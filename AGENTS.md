@@ -40,8 +40,9 @@ test` and keep its checks passing (CI greps for them in `.github/workflows/build
 The app updates itself from the latest GitHub release of this repo (`src/update.c`, HTTPS through
 Mbed TLS): each build fetches its own zip (`HI5-brick.zip` or `-brickpro.zip`, or the `.muxapp` of
 the same name with `-mustardos-` when the app folder has `mux_launch.sh`). Keep `mux_launch.sh` out
-of the TrimUI OS zips: it is how the app tells the two apart. Before tagging a
-release, set `HI5_VERSION` in `src/engine.h` to match the tag; CI refuses a mismatch. When you
+of the TrimUI OS zips: it is how the app tells the two apart. Releases take
+their version from the tag (CI builds with `make VERSION=<tag without v>`, compiled in as
+`HI5_VERSION`); `HI5_VERSION` in `src/engine.h` is only the default for plain builds: keep it, and the README's **Latest release** line, at the latest release (CI checks the two match). When you
 change the updater or the package layout, run `make update-test`.
 
 ## Identity

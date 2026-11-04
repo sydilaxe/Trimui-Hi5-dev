@@ -12,6 +12,8 @@ output for syncing other gear, Wi-Fi tempo sync between units, and USB MIDI cloc
 The engine is the Miyoo version's, unchanged: the same song sounds the same, sample for sample,
 and a `hi5.sav` saved on the Miyoo loads as it is.
 
+**Latest release:** [v0.3.0](../../releases/tag/v0.3.0) · [all releases](../../releases)
+
 ## Install
 
 Each release has a package for each device and firmware. The Brick Pro's adds the analog sticks.
@@ -274,11 +276,11 @@ are `tools/mkfont.py` (from Noto Sans Mono Bold) and `tools/mkicon.py`.
 ### Releases
 
 CI (`.github/workflows/build.yml`) builds both TrimUI packages with zig and runs the tests on
-every push. To publish a release, first set `HI5_VERSION` in `src/engine.h` to the new version.
-The app compares it with the release tag to decide whether it's out of date, so the release job
-refuses a tag that doesn't match (`make version` prints it). Then push the tag (`git tag v0.1.0
-&& git push origin v0.1.0`), or run the workflow from the Actions tab with the tag in
-`release_tag`. Releases are full releases marked Latest, since the updater and `install.sh` read
+every push. To publish a release, push a tag (`git tag v1.2.3 && git push origin v1.2.3`), or run
+the workflow from the Actions tab with the tag in `release_tag`. The version comes from the tag:
+CI builds the release with `make package VERSION=1.2.3`, which the app compares with the latest
+release's tag to tell whether it's out of date. A tag must be `v` and dotted numbers. Plain builds
+use `HI5_VERSION` in `src/engine.h` (`make version` prints the version a build gets); keep it, and the README's **Latest release** line, at the latest release (CI checks the two match). Releases are full releases marked Latest, since the updater and `install.sh` read
 GitHub's latest release, and that skips pre-releases. They have `HI5-brick.zip`,
 `HI5-brickpro.zip`, `HI5-mustardos-brick.muxapp` and `HI5-mustardos-brickpro.muxapp` attached and
 `.github/release-notes.md` as their notes.

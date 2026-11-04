@@ -6,9 +6,9 @@
 #include <stdint.h>
 
 /* the app offers any release newer than this. Release builds set it from the tag
- * (make VERSION=0.3.0, which CI does); this is the version of a plain build. */
+ * (make VERSION=x.y.z, which CI does); this is the version of a plain build. */
 #ifndef HI5_VERSION
-#define HI5_VERSION "0.2.1"
+#define HI5_VERSION "0.3.0"
 #endif
 
 #define NV 5
