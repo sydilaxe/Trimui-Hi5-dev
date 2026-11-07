@@ -15,11 +15,11 @@ TrimUI's USB host port (the Brick's top USB-C, through an OTG adapter or hub). P
 | Pitch bend | none | no | |
 | Control change | none | yes | The settings in the CC table below. |
 | Program change | none | no | |
-| System exclusive | none | no | |
-| Song position | none | yes | Places the sequencer, in 16ths. |
+| System exclusive | yes | yes | Only the Brick link's position (`F0 7D 'T' 'L' ... F7`, 14 bytes, about 50 a second, to linked Bricks only); others pass by. |
+| Song position | none | yes | Places the sequencer, in 16ths (not with START set to IGNORE). |
 | Song select | none | no | |
-| Clock | yes | yes | Out: 24 a quarter note while it plays and no clock comes in, timed to the sound as it is heard. In: the tempo follows it, and its phase is held by trimming the playback speed. `HI5_MIDI_CLOCK=0` sends none; `HI5_MIDI_FOLLOW=0` ignores it. |
-| Start, Continue, Stop | yes | yes | Out with the sequencer. In: START from the top, CONTINUE from where it stopped, STOP. |
+| Clock | yes | yes | Out: 24 a quarter note while it plays and no clock comes in, timed to the sound as it is heard. In: the tempo follows it, and its phase is held by trimming the playback speed. The SONG page's MIDI setting picks the way (AUTO, SEND, FOLLOW, OFF). `HI5_MIDI_CLOCK=0` sends none; `HI5_MIDI_FOLLOW=0` ignores it. |
+| Start, Continue, Stop | yes | yes | Out with the sequencer. In: START from the top, CONTINUE from where it stopped, STOP; ignored with the SONG page's START set to IGNORE. |
 | Active sensing | none | no | |
 | All notes off, all sound off | none | no | |
 | Reset | none | no | |

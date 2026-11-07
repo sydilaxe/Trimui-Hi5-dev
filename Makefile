@@ -26,8 +26,8 @@ SDL_INC := third_party/SDL2-2.30.9-headers
 SRC    := src/engine.c src/ui.c src/gfx.c src/sync.c src/aclock.c
 HDR    := src/engine.h src/ui.h src/gfx.h src/sync.h src/aclock.h src/font_data.h src/update.h
 NET    := src/net.c src/update.c # the self-updater, on the device and in build/hi5_update
-PLAT   := src/midi.c src/perflog.c src/ringleds.c src/main_trimui.c
-PLATH  := src/midi.h src/net.h src/perflog.h src/ringleds.h
+PLAT   := src/midi.c src/link.c src/perflog.c src/ringleds.c src/main_trimui.c
+PLATH  := src/midi.h src/link.h src/net.h src/perflog.h src/ringleds.h
 CFLAGS := -O2 -std=gnu11 -Wall -Wextra -fno-math-errno
 APP    := dist/HI5
 # the app's version: HI5_VERSION in src/engine.h, or VERSION=x.y.z (CI passes the release tag's)
@@ -96,9 +96,9 @@ build/brickpro/hi5: $(SRC) $(NET) $(PLAT) $(HDR) $(PLATH) build/version build/sd
 	@mkdir -p build/brickpro
 	$(DEVICE_CC) -DHI5_BRICKPRO -o $@ $(SRC) $(NET) $(PLAT) $(DEVICE_LINK)
 
-build/hi5_test: $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c $(HDR) src/midi.h src/perflog.h src/ringleds.h build/version
+build/hi5_test: $(SRC) src/midi.c src/link.c src/perflog.c src/ringleds.c src/main_test.c $(HDR) src/midi.h src/link.h src/perflog.h src/ringleds.h build/version
 	@mkdir -p build
-	cc $(CFLAGS) $(VERDEF) -o $@ $(SRC) src/midi.c src/perflog.c src/ringleds.c src/main_test.c -lm -lpthread
+	cc $(CFLAGS) $(VERDEF) -o $@ $(SRC) src/midi.c src/link.c src/perflog.c src/ringleds.c src/main_test.c -lm -lpthread
 
 test: build/hi5_test
 	@mkdir -p build/test
@@ -106,9 +106,9 @@ test: build/hi5_test
 	cd build/test && for f in *.ppm; do $(MAGICK) $$f $${f%.ppm}.png && rm $$f; done
 
 # host-side Wi-Fi sync interop check: run two (or one beside a HI5, Columbia Street or Jaffedrone)
-build/hi5_synctest: $(SRC) src/main_synctest.c $(HDR) build/version
+build/hi5_synctest: $(SRC) src/midi.c src/link.c src/main_synctest.c $(HDR) src/midi.h src/link.h build/version
 	@mkdir -p build
-	cc $(CFLAGS) $(VERDEF) -o $@ $(SRC) src/main_synctest.c -lm
+	cc $(CFLAGS) $(VERDEF) -o $@ $(SRC) src/midi.c src/link.c src/main_synctest.c -lm -lpthread
 
 build/hi5_update: $(NET) src/main_update.c src/engine.h src/net.h src/update.h build/version build/host/libmbedtls.a
 	cc $(CFLAGS) $(VERDEF) -I$(MBED_DIR)/include -o $@ $(NET) src/main_update.c build/host/libmbedtls.a -lpthread

@@ -126,7 +126,9 @@ The pages are PATTERN, MIX, SYNTH, FX and SONG. The footer of each page shows it
   types are REPEAT, TAPESTOP, REVERSE, CRUSH, GATE, DELAY and GRAIN. The OUT row switches
   between stereo and mono + clock, and sets the clock side, PPQN (1-32) and pulse width.
 - **SONG** has eight pattern slots (A-H), eight kits (synth params + mix balance), a 16-step
-  chain and the Wi-Fi sync panel.
+  chain, the MIDI and START settings and the Wi-Fi sync panel.
+  - On MIDI or START (left / right past the chain): up / down or A changes it (see
+    [USB: MIDI clock and audio](#usb-midi-clock-and-audio)).
   - On a pattern slot or kit: A loads, X saves, Y copies a pattern slot and R2+Y clears.
   - On a chain node: up / down picks the slot, A cycles the bars (1/2/4/8), X pastes,
     Y copies, R2+Y clears and R2+A plays the song from that node.
@@ -162,6 +164,30 @@ When HI5 closes, the lights go back to how they were (colours, effects, brightne
 in `launch.sh`: `HI5_LEDS=0` leaves the lights alone, `HI5_LED_BAR=0` keeps the top bar dark,
 `HI5_LED_BRIGHTNESS=1..60` (60 by default).
 
+## Linking Bricks over USB
+
+Several Bricks can play in time with one, by cable, with no MIDI interface between them: the
+**leader** has a USB hub in its **top** port, and each **follower** plugs its **bottom** (charging)
+port into the same hub, with a data cable. The wiring decides who leads, and any number of Bricks
+can follow one (up to eight MIDI devices and Bricks on the leader together). Use a **powered hub**:
+each follower charges from it. The link is the same in Columbia Street, HI5, Jaffedrone and
+RadioScan, so a Brick running one can lead Bricks running the others.
+
+Nothing to set up: when HI5 starts it offers its bottom port as a "TrimUI clock link" (TrimUI's
+kernel has no USB MIDI gadget, so the link is the apps' own), and a leader finds the Bricks on its
+hub within a second and sends them its clock with START and STOP, as to MIDI gear, plus where its
+sound is about 50 times a second. Each follower moves its own sound onto that, measured by its
+audio clock, so they sound together within a tenth of a millisecond, at any tempo up to 250 BPM. A
+follower plugged in mid-song comes in at the leader's place. The leader can still use USB audio and
+MIDI gear on the same hub, and its sound is what the followers line up with, through whichever
+output it plays. A leader that itself follows a drum machine's MIDI clock passes it on, so the
+whole chain follows the drum machine.
+
+On the SONG page the MIDI setting's label reads LINK while Bricks are linked; its value is blue
+while following and green while sending. Set START to IGNORE on a follower to start and stop it
+yourself: it keeps the leader's tempo and lines up with its bar as soon as it plays.
+`HI5_LINK=0` in `launch.sh` leaves the bottom port alone.
+
 ## USB: MIDI clock and audio
 
 The Brick has two USB-C ports: the top one is the USB host port, the bottom one charges. Plug
@@ -169,12 +195,24 @@ class-compliant MIDI and audio devices into the **top** port, directly with a US
 through a hub. They are found as they are plugged in, and a message names each one. The port
 gives about 500 mA, so a device that draws more needs a powered hub.
 
-- **MIDI clock out:** while the sequencer plays and no clock is coming in, HI5 sends clock (24 a
-  quarter note), START and STOP to every MIDI port. The clock is timed to the sound as it is
-  heard, so a drum machine or synth lands on the beat.
-- **MIDI clock in:** the tempo follows it, and its phase is held by trimming the playback speed, as
-  Wi-Fi sync does. START plays from the first step, CONTINUE and song position pick up where they
-  say, STOP stops.
+MIDI and audio work at the same time, from one interface that does both or from separate devices
+on a hub.
+
+- **MIDI on the SONG page:** picks which way the clock goes. **AUTO** (the default) sends it, and
+  follows a clock that comes in instead; **SEND** always sends it and ignores one coming in;
+  **FOLLOW** only follows; **OFF** neither (CCs still come in). Its value is blue while following a
+  clock and green while sending one, dim with no MIDI plugged in.
+- **START on the SONG page:** FOLLOW (the default) starts, stops and places the sequencer with the
+  clock's START, STOP, CONTINUE and song position; **IGNORE** follows the clock's tempo only, so you
+  start and stop it yourself (from a linked Brick it still lines up with the leader's bar).
+- **MIDI clock out:** while the sequencer plays and no clock is coming in (AUTO), or always (SEND),
+  HI5 sends clock (24 a quarter note), START and STOP to every MIDI port. The clock is timed to the
+  sound as it is heard (the audio clock, through whichever output plays it), so a drum machine or
+  synth lands on the beat.
+- **MIDI clock in** (AUTO or FOLLOW): the tempo follows it (a straight line through the last four
+  beats of ticks, so USB's jitter averages out: within a few tenths of a millisecond at 250 BPM),
+  and its phase is held by trimming the playback speed, as Wi-Fi sync does. START plays from the
+  first step, CONTINUE and song position pick up where they say, STOP stops.
 - **Settings by MIDI CC:** the important voice, mixer, pattern and play settings each have a CC, on
   any channel: CC 2 chooses the voice, 14-24 its params, 25-30 its level, pan, drive, send, mute and
   solo, 85-90 the tempo and bus, 102-113 its HIT, STUT and GLITCH cells, 114-115 the pattern slot and
@@ -182,8 +220,9 @@ gives about 500 mA, so a device that draws more needs a powered hub.
 - **Audio:** a USB sound card or DAC takes the output while it is plugged in, and the speaker and
   headphones take it back when it is unplugged.
 
-Settings in `Apps/HI5/launch.sh`, before `./hi5`: `HI5_MIDI=0` turns MIDI off,
-`HI5_MIDI_CLOCK=0` sends no clock, `HI5_MIDI_FOLLOW=0` ignores clock coming in. `HI5_AUDIO=internal`
+Settings in `Apps/HI5/launch.sh`, before `./hi5`: `HI5_MIDI=0` turns MIDI off (and the link),
+`HI5_MIDI_CLOCK=0` never sends clock, `HI5_MIDI_FOLLOW=0` never follows it, whatever the SONG
+page says; `HI5_LINK=0` leaves the bottom port alone. `HI5_AUDIO=internal`
 keeps the speaker; `HI5_AUDIO=<name>` picks a device by name (`log.txt` lists what was opened).
 
 ## Audio
@@ -306,6 +345,7 @@ in statically.
 | `src/update.c`, `src/net.c` | Self-update: GitHub's latest release, the download and unzip; HTTPS |
 | `src/main_trimui.c` | Device entry point (SDL2: video scaled 1.6x, buttons, sticks, USB audio) |
 | `src/midi.c` | USB MIDI clock in and out (ALSA raw MIDI) |
+| `src/link.c` | The clock link between Bricks (the follower's bottom port as a USB gadget) |
 | `src/perflog.c` | The performance log in `log.txt` (shared with RadioScan) |
 | `src/ringleds.c` | The Brick Pro's lights, one by one (shared with RadioScan) |
 | `src/main_test.c` | Host test harness |

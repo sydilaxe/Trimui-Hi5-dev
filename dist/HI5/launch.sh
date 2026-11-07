@@ -21,6 +21,7 @@ export LD_LIBRARY_PATH="/usr/trimui/lib:/usr/lib:$LD_LIBRARY_PATH"
 #   HI5_AUDIO=<name>    the output device whose name contains <name> (see log.txt)
 #   HI5_MIDI=0          no USB MIDI
 #   HI5_MIDI_CLOCK=0    send no MIDI clock;  HI5_MIDI_FOLLOW=0  ignore MIDI clock coming in
+#   HI5_LINK=0          leave the bottom USB port alone (no clock link from a leading Brick)
 #   HI5_SYNC_LATENCY=n  Wi-Fi sync: the frames the sound driver holds (the buffer size by default)
 #   HI5_ROTATE=180      turn the picture, for a firmware whose screen is turned
 #   HI5_LEDS=0          Brick Pro: leave the lights alone;  HI5_LED_BAR=0  keep the top bar dark

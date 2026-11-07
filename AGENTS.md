@@ -24,8 +24,11 @@ Where the code comes from:
   `live.sweep_hand`, 64-bit ARM flush-to-zero, the update prompt).
 - `src/sync.c`, `src/aclock.c`: Columbia Street's, the newer HI5S sync. Shared with the sibling
   apps; keep the copies the same (they are byte for byte Columbia Street's).
-- `src/main_trimui.c`, `src/midi.c`, `src/update.c`, `src/net.c`, `install.sh`, `tools/`,
-  `dist/mustardos/`: Columbia Street's TrimUI platform layer, renamed for HI5. It reads TrimUI OS's
+- `src/main_trimui.c`, `src/midi.c`, `src/link.c`, `src/update.c`, `src/net.c`, `install.sh`, `tools/`,
+  `dist/mustardos/`: Columbia Street's TrimUI platform layer, renamed for HI5. `src/link.c` is the
+  clock link between Bricks (a follower's bottom port as a USB gadget through configfs and
+  FunctionFS, found and driven by the leader through usbfs); keep it and the link's messages in
+  `midi.c` the same as Columbia Street's, Jaffedrone's and RadioScan's, so the apps link to each other. It reads TrimUI OS's
   controller or MustardOS's "muOS-Keys" one, found at run time.
 - `src/perflog.c` and `dist/HI5/sysinfo.sh`: the performance log (`log.txt`) and system report
   (`sysinfo.txt`), shared with RadioScan (`sysinfo.sh` with Jaffedrone too); keep the copies the same.

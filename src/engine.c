@@ -16,7 +16,8 @@
 #define SONG_MAGIC_V6 0x48493506u /* no kits */
 #define SONG_MAGIC_V7 0x48493507u /* no reverb */
 #define SONG_MAGIC_V8 0x48493508u /* no verb_tone */
-#define SONG_MAGIC 0x48493509u
+#define SONG_MAGIC_V9 0x48493509u /* no MIDI settings */
+#define SONG_MAGIC 0x4849350au
 #define TWO_PI 6.28318531f
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
@@ -1626,6 +1627,8 @@ int song_load(const char *path)
         fill_defaults(&s, SONG_V7_SIZE);
     else if (got == SONG_V8_SIZE && s.magic == SONG_MAGIC_V8)
         fill_defaults(&s, SONG_V8_SIZE);
+    else if (got == SONG_V9_SIZE && s.magic == SONG_MAGIC_V9)
+        fill_defaults(&s, SONG_V9_SIZE);
     else if (got != sizeof s || s.magic != SONG_MAGIC)
         return 0;
     for (int v = 0; v < NV; v++) {
@@ -1692,6 +1695,8 @@ int song_load(const char *path)
     s.verb_type = clampi(s.verb_type, 0, NVERB - 1);
     s.verb_time = clampi(s.verb_time, 0, 100);
     s.verb_tone = clampi(s.verb_tone, 0, 100);
+    s.midi_mode = clampi(s.midi_mode, 0, NMIDIMODE - 1);
+    s.midi_clock_only = !!s.midi_clock_only;
     live.cur_slot = -1;
     live.cur_kit = -1;
     chain_pos = chain_bar = 0;

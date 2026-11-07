@@ -9,10 +9,13 @@
 
 #include "engine.h"
 #include "gfx.h"
+#include "link.h"
+#include "midi.h"
 #include "sync.h"
 #include "update.h"
 
 static const char *const sync_mode_names[NSYNCMODE] = {"OFF", "AUTO", "LEAD", "FOLLOW"};
+static const char *const midi_mode_names[NMIDIMODE] = {"AUTO", "SEND", "FOLLOW", "OFF"};
 
 #define C_BG 0x0d0d14
 #define C_PANEL 0x161622
@@ -237,6 +240,8 @@ static void adjust_fx(int dir, int repeats)
 #define SG_KIT0 NSLOT
 #define SG_CHAIN0 (NSLOT + NKIT)
 #define SG_SYNC (NSLOT + NKIT + NCHAIN)
+#define SG_MIDI (SG_SYNC + 1)  /* the MIDI clock over USB: which way it goes */
+#define SG_START (SG_SYNC + 2) /* follow its START / STOP, or the clock only */
 static int sg_on_kit(void) { return sg_cur >= SG_KIT0 && sg_cur < SG_CHAIN0; }
 static int sg_on_chain(void) { return sg_cur >= SG_CHAIN0 && sg_cur < SG_SYNC; }
 
@@ -251,7 +256,23 @@ static void song_action(int b)
         return;
     }
     if (b == BTN_LEFT || b == BTN_RIGHT) {
-        sg_cur = wrap(sg_cur + (b == BTN_RIGHT ? 1 : -1), SG_SYNC + 1);
+        sg_cur = wrap(sg_cur + (b == BTN_RIGHT ? 1 : -1), SG_START + 1);
+        return;
+    }
+    if (sg_cur == SG_MIDI) {
+        if (b == BTN_UP || b == BTN_DOWN || b == BTN_A) {
+            song.midi_mode = wrap(song.midi_mode + (b == BTN_DOWN ? -1 : 1), NMIDIMODE);
+            static const char *const what[NMIDIMODE] = {"SENDS CLOCK, FOLLOWS ONE COMING IN", "SENDS CLOCK ALWAYS",
+                                                        "FOLLOWS CLOCK ONLY", "NO CLOCK"};
+            say("MIDI %s: %s", midi_mode_names[song.midi_mode], what[song.midi_mode]);
+        }
+        return;
+    }
+    if (sg_cur == SG_START) {
+        if (b == BTN_UP || b == BTN_DOWN || b == BTN_A) {
+            song.midi_clock_only = !song.midi_clock_only;
+            say(song.midi_clock_only ? "START/STOP IGNORED: THE CLOCK ONLY" : "START/STOP FOLLOWED");
+        }
         return;
     }
     if (sg_cur == SG_SYNC) {
@@ -680,7 +701,9 @@ static void draw_footer(void)
     };
     const char *hint = hints[page];
     if (page == PAGE_SONG)
-        hint = sg_cur == SG_SYNC ? "^v:OFF/AUTO/LEAD/FOLLOW  (WIFI MUST BE ON)"
+        hint = sg_cur == SG_SYNC    ? "^v:OFF/AUTO/LEAD/FOLLOW  (WIFI MUST BE ON)"
+               : sg_cur == SG_MIDI  ? "^v:MIDI CLOCK AUTO/SEND/FOLLOW/OFF  (USB)"
+               : sg_cur == SG_START ? "^v:FOLLOW / IGNORE START AND STOP"
                : sg_on_chain()   ? "^v:SLOT A:BARS X:PASTE Y:COPY R2+Y:CLEAR R2+A:PLAY B:SONG"
                : sg_on_kit()     ? "KIT  A:LOAD X:SAVE SOUNDS R2+Y:CLEAR B:SONG"
                                  : "A:LOAD X:SAVE Y:COPY R2+Y:CLEAR B:SONG R2+B:CHAIN";
@@ -978,6 +1001,30 @@ static void draw_song(void)
             gfx_ring(px, py, 19.f, 2.f, C_TEXT);
         if (sel)
             gfx_ring(px, py, playing ? 24.f : 20.f, 2.5f, C_ACCENT);
+    }
+
+    /* the MIDI clock over USB, between the kits and Wi-Fi sync: LINK while
+     * Bricks follow this one (or it follows one); the mode blue while
+     * following a clock, green while sending one */
+    for (int k = 0; k < 2; k++) {
+        int x = 14 + k * 144, y = BODY_Y + 268, w = 138, h = 28, sel = sg_cur == (k ? SG_START : SG_MIDI);
+        gfx_fill(x, y, w, h, sel ? gfx_mix(C_PANEL2, C_ACCENT, 0.18f) : C_PANEL);
+        if (sel)
+            gfx_rect(x, y, w, h, 2, C_ACCENT);
+        uint32_t lc = sel ? C_ACCENT + 0x303030 : C_DIM;
+        if (k) {
+            gfx_text(x + 8, y + 4, "START", lc, FONT_SMALL);
+            const char *v = song.midi_clock_only ? "IGNORE" : "FOLLOW";
+            gfx_text(x + w - 8 - gfx_text_w(v, FONT_SMALL), y + 4, v, song.midi_clock_only ? C_ACCENT : C_TEXT,
+                     FONT_SMALL);
+            continue;
+        }
+        int links = midi_links(), lf = link_follow_state(), in = midi_following();
+        int out = live.playing && midi_ports() && !in && (song.midi_mode == MIDI_AUTO || song.midi_mode == MIDI_SEND);
+        gfx_text(x + 8, y + 4, links || lf == 2 ? "LINK" : "MIDI", lc, FONT_SMALL);
+        const char *v = midi_mode_names[clampi(song.midi_mode, 0, NMIDIMODE - 1)];
+        gfx_text(x + w - 8 - gfx_text_w(v, FONT_SMALL), y + 4, v,
+                 in ? 0x46b4ff : out ? C_PLAY : song.midi_mode == MIDI_OFF || !midi_ports() ? C_DIM : C_TEXT, FONT_SMALL);
     }
 
     /* wifi sync panel under the slots */
