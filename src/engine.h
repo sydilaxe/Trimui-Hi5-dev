@@ -92,7 +92,16 @@ typedef struct {
     int kit_send[NKIT][NV];
     /* v0.0.10 */
     int verb_tone; /* loop lowpass, 0 dark .. 100 bright */
+    /* v0.0.11 (TrimUI): MIDI clock over USB (MIDI_*), the device's like the
+     * Wi-Fi sync mode; midi_clock_only: follow the clock's tempo (and over the
+     * Brick link, its bar) but not START, STOP, CONTINUE or song position */
+    int midi_mode, midi_clock_only;
 } Song;
+
+/* the MIDI clock: AUTO sends it and follows one that comes in, SEND always
+ * sends it and ignores one coming in, FOLLOW only follows, OFF neither (CCs
+ * still come in). AUTO is 0, what older songs have */
+enum { MIDI_AUTO, MIDI_SEND, MIDI_FOLLOW, MIDI_OFF, NMIDIMODE };
 
 #define SONG_V1_SIZE offsetof(Song, fx)
 #define SONG_V3_SIZE offsetof(Song, pan)
@@ -101,6 +110,7 @@ typedef struct {
 #define SONG_V6_SIZE offsetof(Song, kit_param)
 #define SONG_V7_SIZE offsetof(Song, send)
 #define SONG_V8_SIZE offsetof(Song, verb_tone)
+#define SONG_V9_SIZE offsetof(Song, midi_mode)
 
 typedef struct {
     float *data;
