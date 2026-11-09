@@ -333,8 +333,9 @@ static void on_hat(int v)
 #ifdef HI5_BRICKPRO
 /* The Brick Pro's sticks: live performance, springing back when let go;
  * nothing they do is saved.
- *   left stick   pushed any way: the L2 low-pass, closed by hand, darker the
- *                further it goes; let go, it opens again
+ *   left stick   down: the L2 low-pass, closed by hand, darker the further it
+ *                goes; up: a high-pass, thinner the further it goes; let go,
+ *                it opens again
  *   right stick  the punch-in FX slots, as R2 + the d-pad: up plays slot 1,
  *                down slot 2, left slot 3, right slot 4
  *   L3           tap tempo;  R3  the next L2 sweep rate (as SELECT)
@@ -353,15 +354,15 @@ static float deadzone(int v)
 
 static void sticks_apply(void)
 {
-    float lx = stick[AX_LX], ly = stick[AX_LY];
-    float amount = sqrtf(lx * lx + ly * ly);
+    float ly = stick[AX_LY]; /* down is +: the low-pass; up the high-pass */
     ui_lock();
-    live.sweep_hand = amount > 1.f ? 1.f : amount;
+    live.sweep_hand = ly > 1.f ? 1.f : ly < -1.f ? -1.f : ly;
     ui_unlock();
     static int step_was;
-    int step = (int)(live.sweep_hand * 4.f + 0.5f); /* quarters, so the log isn't flooded */
+    int step = (int)lroundf(live.sweep_hand * 4.f); /* quarters, so the log isn't flooded */
     if (step != step_was && perf_level() == PERF_DETAIL)
-        perf_log("INPUT", "left stick: the sweep closed by hand %d%%", step * 25);
+        perf_log("INPUT", "left stick: %s by hand %d%%", step < 0 ? "the high-pass" : "the low-pass closed",
+                 abs(step) * 25);
     step_was = step;
     /* the right stick: the way it is pushed furthest, engaged past 60%,
      * let go below 40% */
@@ -381,18 +382,26 @@ static void sticks_apply(void)
 }
 #endif
 
-/* the Brick Pro's LEDs (ringleds.h): the left ring in the filter's blue
- * points with the left stick; the right ring with the right stick, in the
+/* the Brick Pro's LEDs (ringleds.h): the left ring shows the filter, its top
+ * the high-pass (amber), its bottom the low-pass (blue), brighter the further
+ * it goes, L2's sweep included; the right ring points with the right stick, in the
  * colour of the FX it plays; the top bar the output's level; the shoulders
  * the beat */
 static void leds_update(void)
 {
     float lx = 0, ly = 0, rx = 0, ry = 0;
-    uint32_t rcol = 0xb4b4b4;
+    uint32_t lcol = 0x46b4ff, rcol = 0xb4b4b4;
 #ifdef HI5_BRICKPRO
     /* by FX type: REPEAT, TAPESTOP, REVERSE, CRUSH, GATE, DELAY, GRAIN */
     static const uint32_t fx_col[NFXT] = {0xff6414, 0xff2030, 0xb478ff, 0xffb428, 0x30e0a0, 0x3080ff, 0xff60c0};
-    lx = stick[AX_LX], ly = -stick[AX_LY], rx = stick[AX_RX], ry = -stick[AX_RY]; /* the rings' y is up */
+    rx = stick[AX_RX], ry = -stick[AX_RY]; /* the rings' y is up */
+    /* the filter's position: up the high-pass, down the low-pass */
+    if (live.filter_held)
+        ly = -(1.f - live.cutoff_norm);
+    else
+        ly = -live.sweep_hand;
+    if (ly > 0.f)
+        lcol = 0xffb446;
     float ax = fabsf(rx), ay = fabsf(ry);
     if (ax > 0.f || ay > 0.f) {
         int slot = ay >= ax ? (ry > 0.f ? BTN_UP : BTN_DOWN) : (rx < 0.f ? BTN_LEFT : BTN_RIGHT);
@@ -400,7 +409,7 @@ static void leds_update(void)
         rcol = t >= 0 && t < NFXT ? fx_col[t] : rcol;
     }
 #endif
-    ringleds_update(lx, ly, 0x46b4ff, rx, ry, rcol, live.playing, live.step, song.bpm, 0, 0);
+    ringleds_update(lx, ly, lcol, rx, ry, rcol, live.playing, live.step, song.bpm, 0, 0);
 }
 
 static void open_joysticks(void)

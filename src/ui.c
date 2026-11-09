@@ -725,12 +725,14 @@ static void draw_footer(void)
         gfx_text(x + 6, FOOTER_Y + 2, s, 0xffffff, FONT_SMALL);
         x -= 6;
     }
-    if (live.filter_held || live.sweep_hand > 0.f) {
+    if (live.filter_held || live.sweep_hand != 0.f) {
+        /* the Brick Pro's left stick pushed up: the high-pass */
+        int hp = !live.filter_held && live.sweep_hand < 0.f;
         int w = 96;
         x -= w;
         gfx_fill(x, FOOTER_Y + 2, w, 20, C_PANEL2);
         gfx_fill(x, FOOTER_Y + 2, (int)(w * live.cutoff_norm), 20, C_ACCENT);
-        gfx_text(x + 6, FOOTER_Y + 2, "LPF", 0xffffff, FONT_SMALL);
+        gfx_text(x + 6, FOOTER_Y + 2, hp ? "HPF" : "LPF", 0xffffff, FONT_SMALL);
     }
 }
 

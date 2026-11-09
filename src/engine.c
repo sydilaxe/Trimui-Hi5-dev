@@ -356,6 +356,7 @@ static float grain_next[NFXSLOT];
 static float flt_mix, f_ic1[2], f_ic2[2], f_a1, f_a2, f_a3;
 static int f_ctl;
 static float hand_cn = 1.f; /* the cutoff set by the Brick Pro's left stick, smoothed */
+static int f_hp;            /* the filter is the left stick's high-pass (Brick Pro) */
 #define FLT_K 0.5f
 
 static void set_pan(Voice *o, float pan)
@@ -1103,12 +1104,21 @@ void engine_render(int16_t *out, int frames)
     }
     float fx_ramp = 1.f / (0.004f * sr);
     float gate_k = 1.f - expf(-1.f / (0.001f * sr));
-    /* the left stick (Brick Pro) closes the filter by hand while L2 isn't held:
-     * the further it's pushed, the darker; it follows within about 30 ms */
-    float hand = live.sweep_hand < 0.f ? 0.f : live.sweep_hand > 1.f ? 1.f : live.sweep_hand;
+    /* the left stick (Brick Pro) plays the filter by hand while L2 isn't held:
+     * pulled down a low-pass, the further the darker; pushed up a high-pass,
+     * the further the thinner. It follows within about 30 ms; between the two
+     * the filter fades out before it changes kind. */
+    float hand = live.sweep_hand < -1.f ? -1.f : live.sweep_hand > 1.f ? 1.f : live.sweep_hand;
+    int want_hp = !live.filter_held && hand < 0.f;
+    if (want_hp != f_hp && flt_mix <= 0.f) {
+        f_hp = want_hp;
+        hand_cn = f_hp ? 0.f : 1.f;
+    }
+    if (hand < 0.f)
+        hand = -hand;
     int by_hand = !live.filter_held && hand > 0.f;
     float hand_k = 16.f / (0.03f * sr);
-    float flt_target = live.filter_held || by_hand ? 1.f : 0.f;
+    float flt_target = (live.filter_held || by_hand) && want_hp == f_hp ? 1.f : 0.f;
     float flt_ramp = 1.f / (0.02f * sr);
     double clk_period = 4.0 / ppqn_values[song.clk_ppqn];
     float clk_pulse = fminf(song.clk_width * 0.001f * sr, (float)(clk_period * sps * 0.5));
@@ -1271,19 +1281,29 @@ void engine_render(int16_t *out, int frames)
                 ins_mix[sl] = fmaxf(target, ins_mix[sl] - fx_ramp);
         }
 
-        /* L2: tempo-synced resonant lowpass sweep */
+        /* L2: tempo-synced resonant lowpass sweep (or the left stick's
+         * low-pass or high-pass) */
         if (flt_mix > 0.f || flt_target > 0.f) {
             if (--f_ctl <= 0) {
                 f_ctl = 16;
                 int p = sweep_steps[song.sweep_rate];
                 float ph = (float)(fmod(clock_steps, (double)p) / p);
                 float cn = 0.5f + 0.5f * cosf(TWO_PI * ph);
-                if (by_hand)
-                    cn = hand_cn += (1.f - hand - hand_cn) * hand_k;
-                else
-                    hand_cn = live.filter_held ? cn : 1.f;
+                float fc;
+                if (f_hp) {
+                    /* 20 Hz open .. about 6 kHz */
+                    cn = hand_cn += ((by_hand ? hand : 0.f) - hand_cn) * hand_k;
+                    fc = 20.f * powf(300.f, cn);
+                }
+                else {
+                    if (by_hand)
+                        cn = hand_cn += (1.f - hand - hand_cn) * hand_k;
+                    else
+                        hand_cn = live.filter_held ? cn : 1.f;
+                    fc = 90.f * powf(160.f, cn);
+                }
                 live.cutoff_norm = cn;
-                float fc = fminf(90.f * powf(160.f, cn), 0.45f * sr);
+                fc = fminf(fc, 0.45f * sr);
                 float g = tanf(3.14159265f * fc / sr);
                 f_a1 = 1.f / (1.f + g * (g + FLT_K));
                 f_a2 = g * f_a1;
@@ -1296,7 +1316,8 @@ void engine_render(int16_t *out, int frames)
                 float v2 = f_ic2[c] + f_a2 * f_ic1[c] + f_a3 * v3;
                 f_ic1[c] = 2.f * v1 - f_ic1[c];
                 f_ic2[c] = 2.f * v2 - f_ic2[c];
-                in[c] += (v2 - in[c]) * flt_mix;
+                float out = f_hp ? in[c] - FLT_K * v1 - v2 : v2;
+                in[c] += (out - in[c]) * flt_mix;
             }
             L = in[0];
             R = in[1];

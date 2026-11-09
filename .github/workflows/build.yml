@@ -123,7 +123,7 @@ jobs:
           grep -q "^link usb: .*(want 1: 1)" $r
           grep -q "^perflog: .*(want 0, 1, 1: 1)" $r
           grep -q "^perflog jumps: .*(want 0 1 0 0 0: 1)" $r
-          grep -q "^stick: .*(darker: 1), .*(open again: 1); fx: stick 1, R2 first 1, back 1, insert 1, off 1" $r
+          grep -q "^stick: .*(darker: 1), .*(open again: 1), .*(thinner: 1); fx: stick 1, R2 first 1, back 1, insert 1, off 1" $r
           grep -q "^leds: driven 1, effects off 1, bright 1; rings point with the sticks 1, level bar 1, beat on the shoulders 1, the rest dark 1; given back (dark frame, effects on): 1" $r
       - name: Wi-Fi sync between two units over UDP
         run: |

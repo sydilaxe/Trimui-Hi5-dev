@@ -131,7 +131,7 @@ go, and nothing they do is saved.
 
 | Stick | Does |
 | --- | --- |
-| left, pushed any way | Closes the L2 filter by hand: the further, the darker. Let go, it opens again. L2 held wins |
+| left, down / up | Plays the filter by hand: pulled down a low-pass (the further, the darker), pushed up a high-pass (the further, the thinner). Let go, it opens again. L2 held wins |
 | right, up / down / left / right | Plays FX slot 1 / 2 / 3 / 4, as R2 + the d-pad |
 | L3 (click) | Tap tempo |
 | R3 (click) | The next L2 sweep rate, as SELECT |
@@ -144,7 +144,7 @@ While HI5 runs on the Brick Pro it drives the lights one by one:
 
 | Lights | Show |
 | --- | --- |
-| left stick's ring | Points where the left stick is pushed, in the filter's blue: the further, the brighter |
+| left stick's ring | The filter's position: the top for the high-pass (amber), the bottom for the low-pass (blue), brighter the further it goes. L2's sweep shows there too |
 | right stick's ring | Points where the right stick is pushed, in the colour of the FX it plays (REPEAT orange, TAPESTOP red, REVERSE violet, CRUSH amber, GATE green, DELAY blue, GRAIN pink) |
 | top bar | A stereo level meter of the output, from the centre out: the left channel to the left, the right to the right, green rising to amber and red near full scale |
 | under L1, L2, R1, R2 | The beat while playing: a flash each quarter note, orange on the bar's first |

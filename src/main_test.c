@@ -1018,22 +1018,28 @@ int main(int argc, char **argv)
                found == 1, desc && finds);
     }
 
-    /* ---- the Brick Pro's sticks: the left closes the L2 filter by hand and
-     * lets it go again; the right plays the FX slots, R2's d-pad first */
+    /* ---- the Brick Pro's sticks: the left pulled down closes the L2
+     * low-pass by hand, pushed up opens a high-pass, and lets it go again;
+     * the right plays the FX slots, R2's d-pad first */
     {
         song_default();
         engine_init(RATE);
         engine_set_playing(1);
         static float mono[RATE];
-        double hf[3];
-        for (int k = 0; k < 3; k++) {
-            live.sweep_hand = k == 1 ? 1.f : 0.f;
+        double hf[4], lf[4];
+        static const float hand[4] = {0.f, 1.f, 0.f, -1.f}; /* rest, down, rest, up */
+        for (int k = 0; k < 4; k++) {
+            live.sweep_hand = hand[k];
             render_mono(mono, RATE / 2); /* settle */
             render_mono(mono, RATE);
-            double e = 0.0;
-            for (int i = 1; i < RATE; i++)
+            double e = 0.0, l = 0.0;
+            float lp = 0.f, a = 1.f - expf(-6.2831853f * 150.f / RATE); /* the lows: under about 150 Hz */
+            for (int i = 1; i < RATE; i++) {
                 e += (mono[i] - mono[i - 1]) * (double)(mono[i] - mono[i - 1]);
-            hf[k] = e;
+                lp += (mono[i] - lp) * a;
+                l += lp * (double)lp;
+            }
+            hf[k] = e, lf[k] = l;
         }
         live.sweep_hand = 0.f;
         ui_stick_fx(BTN_LEFT); /* slot 3: REVERSE */
@@ -1051,10 +1057,11 @@ int main(int argc, char **argv)
         for (int sl = 0; sl < NFXSLOT; sl++)
             fx_off &= !live.fx_held[sl];
         engine_set_playing(0);
-        printf("stick: filter closed by hand %.1f%% of the highs (darker: %d), let go %.0f%% (open again: %d); "
-               "fx: stick %d, R2 first %d, back %d, insert %d, off %d\n",
-               100.0 * hf[1] / hf[0], hf[1] < 0.2 * hf[0], 100.0 * hf[2] / hf[0], hf[2] > 0.5 * hf[0], fx_stick, fx_r2,
-               fx_back, fx_insert, fx_off);
+        printf("stick: down closes the low-pass, %.1f%% of the highs (darker: %d), let go %.0f%% (open again: %d), "
+               "up opens the high-pass, %.1f%% of the lows (thinner: %d); fx: stick %d, R2 first %d, back %d, insert "
+               "%d, off %d\n",
+               100.0 * hf[1] / hf[0], hf[1] < 0.2 * hf[0], 100.0 * hf[2] / hf[0], hf[2] > 0.5 * hf[0],
+               100.0 * lf[3] / lf[0], lf[3] < 0.2 * lf[0], fx_stick, fx_r2, fx_back, fx_insert, fx_off);
     }
 
     /* DSP benchmark: 60 s of the default song with every glitch row on */
