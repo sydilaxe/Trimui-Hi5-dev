@@ -94,6 +94,7 @@ These work on every page:
 | SELECT | Cycle the L2 sweep rate (1/4, 1/2, 1 bar, 2 bars) |
 | R2 + d-pad | Play the punch-in FX in slots 1-4 (up, down, left, right) |
 | R2 + X | Tap tempo |
+| Side switch (Brick), HOME (Brick Pro) | Random sounds: every voice's synth parameters (the hat's sample too) set at random. Flip the switch either way, or press HOME. The mix, the patterns and the FX stay; save a result you like to a kit on the SONG page |
 | MENU | Quit |
 
 When a new version is out, a prompt covers the page: A updates and restarts, B (or MENU) says
@@ -135,6 +136,7 @@ go, and nothing they do is saved.
 | right, up / down / left / right | Plays FX slot 1 / 2 / 3 / 4, as R2 + the d-pad |
 | L3 (click) | Tap tempo |
 | R3 (click) | The next L2 sweep rate, as SELECT |
+| HOME (on the left, under the volume keys) | Random sounds, as the Brick's side switch |
 
 R2 + the d-pad wins over the right stick while both are held.
 
@@ -221,8 +223,8 @@ The sound is made in 512-frame buffers at 48 kHz (about 11 ms, half the Miyoo's 
 memory locked so it never waits for a page to be read back in; the screen runs below it at 30
 frames a second, and the buttons are read every few milliseconds. If you hear crackles, set
 `HI5_BUFFER=1024`. `HI5_RATE=44100` does a little less work. `HI5_ROTATE=180` turns the picture and
-`HI5_JOYMAP=A=1,B=0,...` renumbers the buttons (also `L2`, `R2`, `L3`, `R3`), for a firmware that
-differs.
+`HI5_JOYMAP=A=1,B=0,...` renumbers the buttons (also `L2`, `R2`, `L3`, `R3`, `HOME`), for a firmware that
+differs. The Brick's side switch is read from GPIO 243; `HI5_SWITCH=0` leaves it alone.
 
 ## Logs and tuning
 

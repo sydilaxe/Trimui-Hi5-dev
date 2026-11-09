@@ -1064,6 +1064,27 @@ int main(int argc, char **argv)
                100.0 * lf[3] / lf[0], lf[3] < 0.2 * lf[0], fx_stick, fx_r2, fx_back, fx_insert, fx_off);
     }
 
+    /* HOME (Brick Pro) / the side switch (Brick): every voice's sound at
+     * random, each within its range; the mix and the patterns stay */
+    {
+        song_default();
+        Song was = song;
+        live.cur_kit = 0;
+        ui_randomize_sounds();
+        int changed = 0, in_range = 1;
+        for (int v = 0; v < NV; v++)
+            for (int p = 0; p < nparam(v); p++) {
+                int x = *param_ptr(v, p);
+                in_range &= x >= param_def(v, p)->min && x <= param_max(v, p);
+            }
+        changed = memcmp(song.param, was.param, sizeof song.param) != 0;
+        int kept = !memcmp(song.vol, was.vol, sizeof song.vol) && !memcmp(song.pan, was.pan, sizeof song.pan) &&
+                   !memcmp(song.cell, was.cell, sizeof song.cell) && !memcmp(song.fx, was.fx, sizeof song.fx);
+        printf("random sounds: changed %d, in range %d, mix and patterns kept %d, kit let go %d\n", changed, in_range,
+               kept, live.cur_kit == -1);
+        song = was;
+    }
+
     /* DSP benchmark: 60 s of the default song with every glitch row on */
     song_default();
     for (int v = 0; v < NV; v++)

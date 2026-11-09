@@ -185,6 +185,22 @@ void ui_tap_tempo(void)
     ui_unlock();
 }
 
+void ui_randomize_sounds(void)
+{
+    if (upd_open)
+        return;
+    ui_lock();
+    for (int v = 0; v < NV; v++)
+        for (int p = 0; p < nparam(v); p++) {
+            int lo = param_def(v, p)->min, hi = param_max(v, p);
+            *param_ptr(v, p) = lo + rand() % (hi - lo + 1);
+        }
+    live.cur_kit = -1; /* the sounds are no longer the kit's */
+    changed = 1;
+    ui_unlock();
+    say("SOUNDS RANDOMIZED");
+}
+
 static void adjust_param(int v, int p, int dir, int repeats)
 {
     const ParamDef *d = param_def(v, p);
@@ -695,7 +711,11 @@ static void draw_footer(void)
     static const char *const hints[PAGE_COUNT] = {
         "A:ON/OFF B:FEWER Y:EUCLID X:ROTATE R2+X:TAP",
         "<>:VOICE ^v:ADJUST A:NEXT ROW Y:MUTE X:SOLO",
-        "DPAD:SELECT Y:- X:+ A:AUDITION",
+#ifdef HI5_BRICKPRO
+        "DPAD:SELECT Y:- X:+ A:AUDITION HOME:RANDOM",
+#else
+        "DPAD:SELECT Y:- X:+ A:AUDITION SWITCH:RANDOM",
+#endif
         "DPAD:SELECT Y:- X:+ R2+DPAD:PLAY",
         "", /* song page: depends on the cursor */
     };

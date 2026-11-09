@@ -39,4 +39,8 @@ void ui_midi_chart(FILE *f);
  * the right stick plays, or -1; and a tap of the tempo (L3) */
 void ui_stick_fx(int slot);
 void ui_tap_tempo(void);
+/* every voice's sound parameters (the synth page, the hat's sample and
+ * extras included) set at random; the mix, the patterns and the FX stay.
+ * The Brick Pro's HOME key, the Brick's side switch. */
+void ui_randomize_sounds(void);
 void ui_set_page(int p); /* for the test harness */
