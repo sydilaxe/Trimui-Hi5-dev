@@ -94,6 +94,7 @@ These work on every page:
 | SELECT | Cycle the L2 sweep rate (1/4, 1/2, 1 bar, 2 bars) |
 | R2 + d-pad | Play the punch-in FX in slots 1-4 (up, down, left, right) |
 | R2 + X | Tap tempo |
+| Side switch (Brick), HOME (Brick Pro) | Random sounds: every voice's synth parameters (the hat's sample too) set at random. Flip the switch either way, or press HOME. The mix, the patterns and the FX stay; save a result you like to a kit on the SONG page |
 | MENU | Quit |
 
 When a new version is out, a prompt covers the page: A updates and restarts, B (or MENU) says
@@ -131,10 +132,11 @@ go, and nothing they do is saved.
 
 | Stick | Does |
 | --- | --- |
-| left, pushed any way | Closes the L2 filter by hand: the further, the darker. Let go, it opens again. L2 held wins |
+| left, down / up | Plays the filter by hand: pulled down a low-pass (the further, the darker), pushed up a high-pass (the further, the thinner). Let go, it opens again. L2 held wins |
 | right, up / down / left / right | Plays FX slot 1 / 2 / 3 / 4, as R2 + the d-pad |
 | L3 (click) | Tap tempo |
 | R3 (click) | The next L2 sweep rate, as SELECT |
+| HOME (on the left, under the volume keys) | Random sounds, as the Brick's side switch |
 
 R2 + the d-pad wins over the right stick while both are held.
 
@@ -144,7 +146,7 @@ While HI5 runs on the Brick Pro it drives the lights one by one:
 
 | Lights | Show |
 | --- | --- |
-| left stick's ring | Points where the left stick is pushed, in the filter's blue: the further, the brighter |
+| left stick's ring | The filter's position: the top for the high-pass (amber), the bottom for the low-pass (blue), brighter the further it goes. L2's sweep shows there too |
 | right stick's ring | Points where the right stick is pushed, in the colour of the FX it plays (REPEAT orange, TAPESTOP red, REVERSE violet, CRUSH amber, GATE green, DELAY blue, GRAIN pink) |
 | top bar | A stereo level meter of the output, from the centre out: the left channel to the left, the right to the right, green rising to amber and red near full scale |
 | under L1, L2, R1, R2 | The beat while playing: a flash each quarter note, orange on the bar's first |
@@ -221,8 +223,8 @@ The sound is made in 512-frame buffers at 48 kHz (about 11 ms, half the Miyoo's 
 memory locked so it never waits for a page to be read back in; the screen runs below it at 30
 frames a second, and the buttons are read every few milliseconds. If you hear crackles, set
 `HI5_BUFFER=1024`. `HI5_RATE=44100` does a little less work. `HI5_ROTATE=180` turns the picture and
-`HI5_JOYMAP=A=1,B=0,...` renumbers the buttons (also `L2`, `R2`, `L3`, `R3`), for a firmware that
-differs.
+`HI5_JOYMAP=A=1,B=0,...` renumbers the buttons (also `L2`, `R2`, `L3`, `R3`, `HOME`), for a firmware that
+differs. The Brick's side switch is read from GPIO 243; `HI5_SWITCH=0` leaves it alone.
 
 ## Logs and tuning
 

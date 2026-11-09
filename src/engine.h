@@ -123,7 +123,8 @@ typedef struct {
 typedef struct {
     int playing;
     int filter_held;
-    float sweep_hand;     /* the Brick Pro's left stick: 0 at rest .. 1 the L2 filter closed by hand */
+    float sweep_hand;     /* the Brick Pro's left stick: 0 at rest; down to 1 the low-pass closed by hand,
+                           * up to -1 the high-pass opened by hand */
     int fx_held[NFXSLOT]; /* R2 + direction held, per slot */
     int fx_src;           /* slot driving the buffer effect, or -1 */
     volatile int step;
