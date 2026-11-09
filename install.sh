@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Install or update HI5 on a TrimUI Brick, Brick Hammer or Brick Pro, running TrimUI OS or
-# MustardOS. Run it on a computer on the same network as the TrimUI:
+# Install or update HI5 on a TrimUI Brick, Brick Hammer or Brick Pro running MustardOS.
+# Run it on a computer on the same network as the TrimUI:
 #
 #   curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/install.sh | bash
 #
 # It finds the TrimUI over SSH (the firmware's SSH server must be on), compares the installed
-# version with the latest GitHub release, and copies the new build there if the release is newer:
-# to SD:/Apps/HI5 on TrimUI OS, or to MustardOS's application folder (MUOS/application/HI5) on
-# MustardOS, which it tells apart by itself. Your song (hi5.sav) and any samples you added stay as
+# version with the latest GitHub release, and copies the new build to MustardOS's application
+# folder (MUOS/application/HI5) if the release is newer. Your song (hi5.sav) and any samples you added stay as
 # they are.
 #
 #   HI5_HOST=192.168.1.28    skip the scan and use this address
 #   HI5_USER=root            SSH user (root by default)
 #   HI5_DEVICE=brickpro      the Brick Pro's build (with the sticks); brick for the Brick and Brick
-#                           Hammer. MustardOS and an installed copy say which it is, so this is only
-#                           needed the first time on TrimUI OS.
+#                           Hammer. MustardOS says which it is, so this is rarely needed.
 #   HI5_FORCE=1              reinstall even if the TrimUI already has the latest version
 #
 # The address that worked is saved in ~/.config/hi5-trimui/host and tried first next time.
@@ -22,8 +20,7 @@
 set -euo pipefail
 
 REPO=sydilaxe/Trimui-Hi5-dev
-APPS=/mnt/SDCARD/Apps                       # TrimUI OS
-MUX_APPS=/run/muos/storage/application     # MustardOS: SD2's or SD1's MUOS/application
+MUX_APPS=/run/muos/storage/application     # SD2's or SD1's MUOS/application
 SSH_USER=${HI5_USER:-root}
 SAVED=${XDG_CONFIG_HOME:-$HOME/.config}/hi5-trimui/host
 
@@ -115,7 +112,7 @@ on_device() {
 }
 
 main() {
-    local c latest installed device asset os folder dest where
+    local c latest installed device asset folder="HI5" dest=$MUX_APPS
 
     for c in curl unzip ssh tar awk; do
         command -v "$c" >/dev/null || die "this needs $c"
@@ -142,20 +139,17 @@ main() {
     [ -n "$host" ] || scan
 
     say "connecting to $SSH_USER@$host"
-    # "OS VERSION DEVICE": the firmware (trimui / mustardos), and the installed version and build
-    # (brick / brickpro), each "-" when not known. MustardOS names the device itself.
-    installed=$(on_device "if [ -d /opt/muos ]; then
-            d='$MUX_APPS/HI5'; os=mustardos
-            case \$(cat /opt/muos/device/config/board/name 2>/dev/null) in
-            tui-brick-pro) dev=brickpro ;; tui-brick) dev=brick ;; *) dev= ;; esac
-        else
-            test -d $APPS || exit 3; d=$APPS/HI5; os=trimui; dev=
-        fi
+    # "VERSION DEVICE": the installed version and build (brick / brickpro), each "-" when not
+    # known. MustardOS names the device itself.
+    installed=$(on_device "test -d /opt/muos || exit 3
+        d='$MUX_APPS/HI5'
+        case \$(cat /opt/muos/device/config/board/name 2>/dev/null) in
+        tui-brick-pro) dev=brickpro ;; tui-brick) dev=brick ;; *) dev= ;; esac
         v=\$(cat \"\$d/VERSION\" 2>/dev/null); dev=\${dev:-\$(cat \"\$d/DEVICE\" 2>/dev/null)}
-        echo \"\$os \${v:--} \${dev:--}\"" </dev/null) ||
-        die "couldn't log in to $host, or it has no $APPS (is it the TrimUI card?)"
+        echo \"\${v:--} \${dev:--}\"" </dev/null) ||
+        die "couldn't log in to $host, or it isn't running MustardOS (HI5 is built only for MustardOS)"
     mkdir -p "$(dirname "$SAVED")" && echo "$host" >"$SAVED"
-    read -r os installed device <<<"$(printf '%s\n' "$installed" | head -n 1)"
+    read -r installed device <<<"$(printf '%s\n' "$installed" | head -n 1)"
     [ "$installed" = - ] && installed=
     [ "$device" = - ] && device=
     device=${HI5_DEVICE:-$device}
@@ -167,12 +161,8 @@ main() {
         ;;
     *) die "HI5_DEVICE is brick or brickpro, not $device" ;;
     esac
-    if [ "$os" = mustardos ]; then
-        asset=HI5-mustardos-$device.muxapp folder="HI5" dest=$MUX_APPS where=Applications
-        say "MustardOS on a $([ $device = brickpro ] && echo "Brick Pro" || echo "Brick / Brick Hammer")"
-    else
-        asset=HI5-$device.zip folder=HI5 dest=$APPS where=Apps
-    fi
+    asset=HI5-mustardos-$device.muxapp
+    say "MustardOS on a $([ $device = brickpro ] && echo "Brick Pro" || echo "Brick / Brick Hammer")"
 
     if [ -z "$installed" ]; then
         say "the TrimUI has no HI5 yet"
@@ -190,9 +180,8 @@ main() {
     say "downloading v$latest ($asset)..."
     curl -fsSL -o "$tmp/$asset" "https://github.com/$REPO/releases/download/v$latest/$asset"
     unzip -q "$tmp/$asset" -d "$tmp/zip"
-    # the TrimUI OS zip holds Apps/HI5, the .muxapp "HI5"
-    local src="$tmp/zip/Apps"
-    [ "$os" = mustardos ] && src="$tmp/zip"
+    # the .muxapp holds "HI5"
+    local src="$tmp/zip"
     [ -f "$src/$folder/hi5" ] || die "the release's $asset has no $folder/hi5"
     # the song is the user's (releases don't carry one, but never overwrite it)
     rm -f "$src/$folder/"hi5.sav*
@@ -200,7 +189,7 @@ main() {
     say "copying to $host:$dest/$folder..."
     (cd "$src" && COPYFILE_DISABLE=1 tar --format=ustar -cf - "$folder") |
         on_device "mkdir -p '$dest' && tar -xf - -C '$dest' && sync"
-    say "HI5 v$latest is installed. Launch it from $where."
+    say "HI5 v$latest is installed. Launch it from Applications."
 }
 
 # everything runs from here, so bash has read the whole script before `curl | bash` starts it

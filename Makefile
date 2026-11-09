@@ -1,16 +1,14 @@
-# HI5 — FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro (TrimUI OS and
-# MustardOS)
+# HI5 — FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro, running
+# MustardOS
 #
 #   make          cross-compile both builds with zig (aarch64, glibc 2.28, against the device's SDL2):
 #                   build/brick/hi5      TrimUI Brick and Brick Hammer
 #                   build/brickpro/hi5   TrimUI Brick Pro (adds the analog sticks)
-#   make package  both, zipped to unzip at the root of the SD card:
-#                   build/HI5-brick.zip, build/HI5-brickpro.zip
-#                 and as MustardOS application archives (the same binaries):
+#   make package  both, as MustardOS application archives:
 #                   build/HI5-mustardos-brick.muxapp, build/HI5-mustardos-brickpro.muxapp
 #   make test     build the host harness and render screenshots + audio into build/test
-#   make install SD=/path/to/card [DEVICE=brickpro] [OS=mustardos]
-#                 copy the app into SD/Apps/HI5 (or SD/MUOS/application/HI5)
+#   make install SD=/path/to/card [DEVICE=brickpro]
+#                 copy the app into SD/MUOS/application/HI5
 #   make update-test   install a fake release over a test app folder, the way the app updates itself
 #   make version  print the version built (HI5_VERSION in src/engine.h, or VERSION=x.y.z);
 #                 releases are tagged v<version>, and CI builds them with VERSION from the tag
@@ -53,7 +51,7 @@ src/font_data.h: tools/mkfont.py
 $(APP)/icon.png: tools/mkicon.py
 	python3 tools/mkicon.py $@
 
-# a stand-in for the device's libSDL2-2.0.so.0, to link against (TrimUI OS has the real one)
+# a stand-in for the device's libSDL2-2.0.so.0, to link against (the device has the real one)
 build/sdl2/libSDL2-2.0.so.0: tools/mksdlstub.py src/main_trimui.c
 	@mkdir -p build/sdl2
 	python3 tools/mksdlstub.py build/sdl2/sdl2_stub.c src/main_trimui.c
@@ -119,21 +117,9 @@ update-test: build/hi5_update
 version:
 	@echo $(VERSION)
 
-# one SD card layout per device: Apps/HI5, as TrimUI OS lists apps
-build/HI5-%.zip: build/%/hi5 $(APP)/icon.png $(APP)/VERSION $(APP)/LICENSE-mbedtls.txt
-	rm -rf build/sd-$* $@
-	mkdir -p build/sd-$*/Apps
-	cp -r $(APP) build/sd-$*/Apps/
-	rm -f build/sd-$*/Apps/HI5/*.sav* build/sd-$*/Apps/HI5/log.txt
-	cp build/$*/hi5 build/sd-$*/Apps/HI5/
-	echo $* > build/sd-$*/Apps/HI5/DEVICE # which build: read by install.sh
-	chmod +x build/sd-$*/Apps/HI5/launch.sh build/sd-$*/Apps/HI5/hi5
-	cd build/sd-$* && zip -qr ../HI5-$*.zip Apps
-
 # MustardOS: a .muxapp is a zip that its Archive Manager unpacks into the application folder
 # (MUOS/application on the card), and the folder's name is the name in the Applications list.
-# The same app folder and binary, plus mux_launch.sh (how MustardOS starts an app, and how the
-# app knows to update from this package), wake_screen.sh and the list glyph.
+# The app folder and binary, plus mux_launch.sh (how MustardOS starts an app), wake_screen.sh and the list glyph.
 MUX := dist/mustardos
 MUX_APP := HI5
 build/HI5-mustardos-%.muxapp: build/%/hi5 $(APP)/icon.png $(APP)/VERSION $(APP)/LICENSE-mbedtls.txt $(MUX)/mux_launch.sh $(MUX)/wake_screen.sh $(MUX)/glyph/hi5.svg
@@ -148,24 +134,17 @@ build/HI5-mustardos-%.muxapp: build/%/hi5 $(APP)/icon.png $(APP)/VERSION $(APP)/
 		"build/mux-$*/$(MUX_APP)/wake_screen.sh" "build/mux-$*/$(MUX_APP)/hi5"
 	cd build/mux-$* && zip -qr ../HI5-mustardos-$*.muxapp "$(MUX_APP)"
 
-package: build/HI5-brick.zip build/HI5-brickpro.zip \
-	build/HI5-mustardos-brick.muxapp build/HI5-mustardos-brickpro.muxapp
+package: build/HI5-mustardos-brick.muxapp build/HI5-mustardos-brickpro.muxapp
 
 DEVICE ?= brick
-OS ?= trimui
-ifeq ($(OS),mustardos)
 INSTALL_DIR = $(SD)/MUOS/application/$(MUX_APP)
 INSTALL_ROOT = $(SD)/MUOS
-else
-INSTALL_DIR = $(SD)/Apps/HI5
-INSTALL_ROOT = $(SD)/Apps
-endif
 install: build/$(DEVICE)/hi5 $(APP)/icon.png $(APP)/VERSION $(APP)/LICENSE-mbedtls.txt
-	@test -n "$(SD)" || (echo "usage: make install SD=/path/to/mounted/sdcard [DEVICE=brickpro] [OS=mustardos]" && exit 1)
-	@test -d "$(INSTALL_ROOT)" || (echo "$(INSTALL_ROOT) not found — is this the $(OS) card?" && exit 1)
+	@test -n "$(SD)" || (echo "usage: make install SD=/path/to/mounted/sdcard [DEVICE=brickpro]" && exit 1)
+	@test -d "$(INSTALL_ROOT)" || (echo "$(INSTALL_ROOT) not found — is this the MustardOS card?" && exit 1)
 	mkdir -p "$(INSTALL_DIR)"
 	cp -r $(APP)/. "$(INSTALL_DIR)/"
-	if [ "$(OS)" = mustardos ]; then cp -r $(MUX)/. "$(INSTALL_DIR)/"; fi
+	cp -r $(MUX)/. "$(INSTALL_DIR)/"
 	cp build/$(DEVICE)/hi5 "$(INSTALL_DIR)/"
 	echo $(DEVICE) > "$(INSTALL_DIR)/DEVICE"
 	sync
