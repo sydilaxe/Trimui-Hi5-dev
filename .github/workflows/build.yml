@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: |
           # generated files are committed; keep make from regenerating them
-          touch src/font_data.h dist/HI5/icon.png
+          touch src/font_data.h
           pip install ziglang==0.14.1
           # the scripts the device runs: launchers, the screen wake, the system report
           for s in dist/HI5/launch.sh dist/HI5/sysinfo.sh dist/mustardos/*.sh; do sh -n "$s"; done
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and run the test harness
         run: |
-          touch src/font_data.h dist/HI5/icon.png
+          touch src/font_data.h
           make build/hi5_test build/hi5_synctest
           mkdir -p build/test
           build/hi5_test build/test dist/HI5/samples | tee build/test/results.txt

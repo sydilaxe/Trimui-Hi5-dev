@@ -15,8 +15,7 @@ mkdir -p "$T/rel/HI5/samples/KIT" $T/bad $T/app/samples
 # the release: launch.sh, mux_launch.sh and friends, a binary, two samples (one in a
 # folder), and a hi5.sav that must never reach the user's folder
 R="$T/rel/HI5"
-cp dist/HI5/launch.sh dist/HI5/config.json dist/HI5/icon.png \
-    dist/HI5/cacert.pem dist/mustardos/mux_launch.sh "$R/"
+cp dist/HI5/launch.sh dist/HI5/cacert.pem dist/mustardos/mux_launch.sh "$R/"
 cp build/hi5_update "$R/hi5"
 echo 9.9.9 > "$R/VERSION"
 head -c 300000 /dev/urandom > "$R/samples/LOOP.wav"

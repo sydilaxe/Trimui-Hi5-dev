@@ -11,7 +11,7 @@ for c in 0 1 2 3; do
 done
 echo performance > $CPU/cpu0/cpufreq/scaling_governor 2>/dev/null
 
-export LD_LIBRARY_PATH="/usr/trimui/lib:/usr/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
 
 # Optional settings, before ./hi5 (for example HI5_BUFFER=1024 ./hi5):
 #   HI5_BUFFER=1024     bigger audio buffers if you hear crackle (512 by default)

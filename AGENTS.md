@@ -30,7 +30,7 @@ Where the code comes from:
   clock link between Bricks (a follower's bottom port as a USB gadget through configfs and
   FunctionFS, found and driven by the leader through usbfs); keep it and the link's messages in
   `midi.c` the same as Columbia Street's, Jaffedrone's and RadioScan's, so the apps link to each other. It reads MustardOS's
-  "muOS-Keys" controller (or the TrimUI's own one), found at run time.
+  "muOS-Keys" controller (the Brick's or the Brick Pro's numbering, found at run time).
 - `src/perflog.c` and `dist/HI5/sysinfo.sh`: the performance log (`log.txt`) and system report
   (`sysinfo.txt`), shared with RadioScan (`sysinfo.sh` with Jaffedrone too); keep the copies the same.
   The audio callback only calls `perf_audio_begin` / `perf_audio_end`. When you add a setting that

@@ -296,8 +296,7 @@ Both builds are aarch64 for glibc 2.28, for the Cortex-A53. They link against a 
 At run time the app reads MustardOS's "muOS-Keys" controller (its numbering is MustardOS's own,
 from its `device/tui-brick*` controller maps), and updates from its device's `.muxapp`.
 
-`src/font_data.h` and `dist/HI5/icon.png` are generated files. The scripts that make them
-are `tools/mkfont.py` (from Noto Sans Mono Bold) and `tools/mkicon.py`.
+`src/font_data.h` is a generated file, made by `tools/mkfont.py` (from Noto Sans Mono Bold).
 
 ### Releases
 
