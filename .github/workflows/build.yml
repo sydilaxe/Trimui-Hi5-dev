@@ -39,8 +39,9 @@ jobs:
           bash -n install.sh
           # a release is built as the tag's version (v0.3.0 -> 0.3.0), which the app compares
           # with the latest release's tag to offer updates; otherwise HI5_VERSION in src/engine.h
+          # (a tag typed as V0.5.0, 0.5.0 or with spaces around it is taken as v0.5.0)
           if [ -n "$RELEASE_TAG" ]; then
-            v=${RELEASE_TAG#v}
+            v=$(printf '%s' "$RELEASE_TAG" | tr -d '[:space:]'); v=${v#[vV]}
             echo "$v" | grep -Eqx '[0-9]+(\.[0-9]+)*' || { echo "::error::release tag $RELEASE_TAG isn't v<number>.<number>..."; exit 1; }
           else
             v=$(make -s version)
@@ -155,12 +156,15 @@ jobs:
       - name: Check the packages are the tag's version
         run: |
           # the mustardos job built them as the tag's version; a mismatch would make the app offer
-          # this update forever. A manual run's tag may leave out the v.
-          TAG=v${RELEASE_TAG#v}
+          # this update forever. A manual run's tag may leave out the v, or be typed V0.5.0.
+          v=$(printf '%s' "$RELEASE_TAG" | tr -d '[:space:]'); v=${v#[vV]}
+          TAG=v$v
+          # a release made on the website keeps its own tag; the packages go onto it
+          if [ "$GITHUB_EVENT_NAME" = release ]; then TAG=$RELEASE_TAG; fi
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           for d in brick brickpro; do
-            test "$(unzip -p HI5-mustardos-$d.muxapp "HI5/VERSION")" = "${TAG#v}" ||
-              { echo "::error::HI5-mustardos-$d.muxapp isn't version ${TAG#v}"; exit 1; }
+            test "$(unzip -p HI5-mustardos-$d.muxapp "HI5/VERSION")" = "$v" ||
+              { echo "::error::HI5-mustardos-$d.muxapp isn't version $v"; exit 1; }
           done
       - name: Create the GitHub release with the MustardOS packages
         env:

@@ -8,7 +8,7 @@
 /* the app offers any release newer than this. Release builds set it from the tag
  * (make VERSION=x.y.z, which CI does); this is the version of a plain build. */
 #ifndef HI5_VERSION
-#define HI5_VERSION "0.3.0"
+#define HI5_VERSION "0.5.0"
 #endif
 
 #define NV 5
