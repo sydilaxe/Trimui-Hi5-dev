@@ -21,17 +21,7 @@
 static UpdateStatus us;
 static char install_dir[1024];
 /* "/" and the release file's name, so the name can be matched at the end of a URL */
-static const char *asset_path = "/" HI5_ASSET, *zip_dir = HI5_ZIP_DIR;
-
-int update_detect_package(const char *app_dir)
-{
-    char path[1100];
-    snprintf(path, sizeof path, "%s/" HI5_MUSTARD_LAUNCHER, app_dir);
-    int mustard = access(path, F_OK) == 0;
-    asset_path = mustard ? "/" HI5_ASSET_MUSTARD : "/" HI5_ASSET;
-    zip_dir = mustard ? HI5_ZIP_DIR_MUSTARD : HI5_ZIP_DIR;
-    return mustard;
-}
+static const char *const asset_path = "/" HI5_ASSET, *const zip_dir = HI5_ZIP_DIR;
 
 const char *update_asset(void) { return asset_path + 1; }
 
