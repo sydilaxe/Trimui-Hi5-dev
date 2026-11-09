@@ -1,15 +1,16 @@
 # AGENTS.md
 
 HI5 is a 5-voice FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro running
-TrimUI OS or MustardOS (Allwinner A133P: four Cortex-A53 cores, 1 GB, a 1024x768 screen), ported from the Miyoo
+MustardOS (Allwinner A133P: four Cortex-A53 cores, 1 GB, a 1024x768 screen), ported from the Miyoo
 Mini Plus version (mercurious/hi5) the way Columbia Street was (sydilaxe/Trimui-Columbiastreet-dev).
 Four FM percussion voices and a micro-loop hat sampler, each sequenced by three Euclidean cells
 (HIT, STUT, GLCH).
 
 `make` cross-compiles two builds with zig (aarch64, glibc 2.28) against the device's SDL2:
 `build/brick/hi5` and `build/brickpro/hi5` (`-DHI5_BRICKPRO` adds the analog sticks and makes the
-updater fetch the Brick Pro's packages). `make package` zips both for TrimUI OS (`Apps/HI5`) and as
-MustardOS application archives (`HI5-mustardos-*.muxapp`: the same binaries in `HI5/`, plus
+updater fetch the Brick Pro's packages). `make package` zips both as MustardOS
+application archives, the only packages built (`HI5-mustardos-brick.muxapp` and `-brickpro.muxapp`:
+the binaries in `HI5/`, plus
 `dist/mustardos/mux_launch.sh`, `wake_screen.sh` (run through `HI5_SCREEN_WAKE` once the window is
 up, as the screen can stay dark on MustardOS until a sleep and wake) and the list glyph). The
 samples load on a thread while the loading screen keeps being presented. `make test` renders
@@ -28,8 +29,8 @@ Where the code comes from:
   `dist/mustardos/`: Columbia Street's TrimUI platform layer, renamed for HI5. `src/link.c` is the
   clock link between Bricks (a follower's bottom port as a USB gadget through configfs and
   FunctionFS, found and driven by the leader through usbfs); keep it and the link's messages in
-  `midi.c` the same as Columbia Street's, Jaffedrone's and RadioScan's, so the apps link to each other. It reads TrimUI OS's
-  controller or MustardOS's "muOS-Keys" one, found at run time.
+  `midi.c` the same as Columbia Street's, Jaffedrone's and RadioScan's, so the apps link to each other. It reads MustardOS's
+  "muOS-Keys" controller (the Brick's or the Brick Pro's numbering, found at run time).
 - `src/perflog.c` and `dist/HI5/sysinfo.sh`: the performance log (`log.txt`) and system report
   (`sysinfo.txt`), shared with RadioScan (`sysinfo.sh` with Jaffedrone too); keep the copies the same.
   The audio callback only calls `perf_audio_begin` / `perf_audio_end`. When you add a setting that
@@ -41,9 +42,8 @@ table for the sticks) and the footer hints in `src/ui.c`. When you change the en
 test` and keep its checks passing (CI greps for them in `.github/workflows/build.yml`).
 
 The app updates itself from the latest GitHub release of this repo (`src/update.c`, HTTPS through
-Mbed TLS): each build fetches its own zip (`HI5-brick.zip` or `-brickpro.zip`, or the `.muxapp` of
-the same name with `-mustardos-` when the app folder has `mux_launch.sh`). Keep `mux_launch.sh` out
-of the TrimUI OS zips: it is how the app tells the two apart. Releases take
+Mbed TLS): each build fetches its own `.muxapp` (`HI5-mustardos-brick.muxapp` or `-brickpro.muxapp`).
+Only MustardOS is built for: no TrimUI OS or Knulli packages. Releases take
 their version from the tag (CI builds with `make VERSION=<tag without v>`, compiled in as
 `HI5_VERSION`); `HI5_VERSION` in `src/engine.h` is only the default for plain builds: keep it, and the README's **Latest release** line, at the latest release (CI checks the two match). When you
 change the updater or the package layout, run `make update-test`.

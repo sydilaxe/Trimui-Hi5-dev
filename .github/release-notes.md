@@ -1,5 +1,5 @@
-HI5, a 5-voice FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro (TrimUI OS and
-MustardOS).
+HI5, a 5-voice FM glitch beat generator for the TrimUI Brick, Brick Hammer and Brick Pro running
+MustardOS.
 
 **Install on MustardOS**
 
@@ -7,17 +7,15 @@ Copy `HI5-mustardos-brick.muxapp` (Brick, Brick Hammer) or `HI5-mustardos-brickp
 the `ARCHIVE` folder of the first SD card, install it from **Applications → Archive Manager**, then open
 **Applications → HI5**. Press MENU to quit.
 
-**Install on TrimUI OS**
-
-Unzip `HI5-brick.zip` (Brick, Brick Hammer) or `HI5-brickpro.zip` (Brick Pro) at the root of the SD card
-(it contains `Apps/HI5/`), then open **Apps → HI5**. Press MENU to quit.
-
-Or, on either firmware, with the TrimUI's SSH server on, run this on a computer on the same network (on TrimUI
-OS, add `HI5_DEVICE=brickpro` before `bash` the first time on a Brick Pro):
+Or, with the TrimUI's SSH server on, run this on a computer on the same network:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/install.sh | bash
 ```
+
+**Change: MustardOS only**
+- HI5 is now built only for MustardOS, on the Brick (and Brick Hammer) and the Brick Pro. The TrimUI OS zips are
+  no longer released; a copy installed from one won't find its update, so install the `.muxapp` instead.
 
 **New: the Brick Pro's lights follow the music**
 - Each stick's ring points where the stick is pushed: the left in the filter's blue, the right in the colour of
@@ -54,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/instal
 
 **New: MustardOS, and logs for tuning**
 - Packages for MustardOS on the Brick, Brick Hammer and Brick Pro, installed from the Archive Manager. The app
-  reads MustardOS's controller, so every button (and the Brick Pro's sticks) works as on TrimUI OS, and it
+  reads MustardOS's controller, so every button (and the Brick Pro's sticks) works, and it
   updates itself from the MustardOS package.
 - The screen no longer stays dark on a Brick Pro under MustardOS, and the loading screen stays up while the
   samples load.
@@ -73,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/sydilaxe/Trimui-Hi5-dev/HEAD/instal
 - **USB audio:** a USB sound card or DAC takes over the output while it is plugged in.
 - **Brick Pro:** the left stick closes the L2 filter by hand; the right stick plays FX slots 1-4; L3 taps
   the tempo, R3 cycles the L2 sweep rate.
-- **Updates itself** from this repo's releases, each device and firmware fetching its own package.
+- **Updates itself** from this repo's releases, each device fetching its own package.
 
-If you hear crackles, set `HI5_BUFFER=1024` in `launch.sh` in the app folder (`Apps/HI5` on TrimUI OS,
-`MUOS/application/HI5` on MustardOS). The logs are written to `log.txt` and `sysinfo.txt` in the same folder.
+If you hear crackles, set `HI5_BUFFER=1024` in `launch.sh` in the app folder
+(`MUOS/application/HI5`). The logs are written to `log.txt` and `sysinfo.txt` in the same folder.

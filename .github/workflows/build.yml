@@ -18,8 +18,8 @@ env:
   RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
 
 jobs:
-  trimui:
-    name: TrimUI packages (Brick / Brick Hammer, Brick Pro; TrimUI OS and MustardOS)
+  mustardos:
+    name: MustardOS packages (Brick / Brick Hammer, Brick Pro)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: |
           # generated files are committed; keep make from regenerating them
-          touch src/font_data.h dist/HI5/icon.png
+          touch src/font_data.h
           pip install ziglang==0.14.1
           # the scripts the device runs: launchers, the screen wake, the system report
           for s in dist/HI5/launch.sh dist/HI5/sysinfo.sh dist/mustardos/*.sh; do sh -n "$s"; done
@@ -47,29 +47,18 @@ jobs:
           fi
           echo "building version $v"
           make -j"$(nproc)" package VERSION="$v"
-          for d in brick brickpro; do
-            z=build/HI5-$d.zip
-            ls -l $z
-            unzip -l $z | grep -q "Apps/HI5/hi5$"
-            unzip -l $z | grep -q "Apps/HI5/launch.sh$"
-            unzip -l $z | grep -q "Apps/HI5/sysinfo.sh$"
-            unzip -l $z | grep -q "Apps/HI5/samples/README.txt$"
-            # the self-updater needs these: the CA bundle for HTTPS, and VERSION and DEVICE for install.sh
-            unzip -l $z | grep -q "Apps/HI5/cacert.pem"
-            test "$(unzip -p $z Apps/HI5/VERSION)" = "$v"
-            test "$(unzip -p $z Apps/HI5/DEVICE)" = $d
-            file build/$d/hi5 | grep -q "ARM aarch64"
-          done
-          # MustardOS: the same binaries in "HI5/", with mux_launch.sh and the list glyph
+          # the binaries in "HI5/", with mux_launch.sh and the list glyph
           for d in brick brickpro; do
             z=build/HI5-mustardos-$d.muxapp
             ls -l $z
+            file build/$d/hi5 | grep -q "ARM aarch64"
             unzip -l $z | grep -q "HI5/hi5$"
             unzip -l $z | grep -q "HI5/mux_launch.sh$"
             unzip -l $z | grep -q "HI5/wake_screen.sh$"
             unzip -l $z | grep -q "HI5/sysinfo.sh$"
             unzip -l $z | grep -q "HI5/glyph/hi5.svg$"
             unzip -l $z | grep -q "HI5/samples/README.txt$"
+            # the self-updater needs these: the CA bundle for HTTPS, and VERSION and DEVICE for install.sh
             unzip -l $z | grep -q "HI5/cacert.pem"
             test "$(unzip -p $z "HI5/VERSION")" = "$v"
             test "$(unzip -p $z "HI5/DEVICE")" = $d
@@ -78,15 +67,9 @@ jobs:
             # (a bare "! cmd" can't fail a step under set -e, hence the ifs)
             if unzip -Z1 $z | grep -Eq '^/|(^|/)\.\.(/|$)|\\'; then echo "::error::$z has unsafe paths"; exit 1; fi
             if unzip -Zl $z | grep -Eq '^[bclps]'; then echo "::error::$z has links or devices"; exit 1; fi
-            # the TrimUI OS zip must not carry mux_launch.sh: it is how the app tells the packages apart
-            if unzip -l build/HI5-$d.zip | grep -q mux_launch.sh; then
-              echo "::error::HI5-$d.zip has mux_launch.sh"; exit 1
-            fi
           done
-          # the two builds differ by the Brick Pro's sticks (and the packages each updates from)
+          # the two builds differ by the Brick Pro's sticks (and the package each updates from)
           if cmp -s build/brick/hi5 build/brickpro/hi5; then echo "::error::the two builds are the same"; exit 1; fi
-          strings build/brick/hi5 | grep -qx "/HI5-brick.zip"
-          strings build/brickpro/hi5 | grep -qx "/HI5-brickpro.zip"
           strings build/brick/hi5 | grep -qx "/HI5-mustardos-brick.muxapp"
           strings build/brickpro/hi5 | grep -qx "/HI5-mustardos-brickpro.muxapp"
           # the version the binaries were built as, which the updater compares with the release
@@ -94,10 +77,8 @@ jobs:
           strings build/brickpro/hi5 | grep -qx "THIS IS V$v"
       - uses: actions/upload-artifact@v4
         with:
-          name: HI5-trimui
+          name: HI5-mustardos
           path: |
-            build/HI5-brick.zip
-            build/HI5-brickpro.zip
             build/HI5-mustardos-brick.muxapp
             build/HI5-mustardos-brickpro.muxapp
 
@@ -108,7 +89,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and run the test harness
         run: |
-          touch src/font_data.h dist/HI5/icon.png
+          touch src/font_data.h
           make build/hi5_test build/hi5_synctest
           mkdir -p build/test
           build/hi5_test build/test dist/HI5/samples | tee build/test/results.txt
@@ -162,7 +143,7 @@ jobs:
     name: Publish release
     # runs for: a pushed v* tag, a release created on the website, or a manual run with a tag filled in
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || inputs.release_tag != ''
-    needs: [trimui, test]
+    needs: [mustardos, test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -170,24 +151,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: HI5-trimui
+          name: HI5-mustardos
       - name: Check the packages are the tag's version
         run: |
-          # the trimui job built them as the tag's version; a mismatch would make the app offer
+          # the mustardos job built them as the tag's version; a mismatch would make the app offer
           # this update forever. A manual run's tag may leave out the v.
           TAG=v${RELEASE_TAG#v}
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           for d in brick brickpro; do
-            test "$(unzip -p HI5-$d.zip Apps/HI5/VERSION)" = "${TAG#v}" ||
-              { echo "::error::HI5-$d.zip isn't version ${TAG#v}"; exit 1; }
             test "$(unzip -p HI5-mustardos-$d.muxapp "HI5/VERSION")" = "${TAG#v}" ||
               { echo "::error::HI5-mustardos-$d.muxapp isn't version ${TAG#v}"; exit 1; }
           done
-      - name: Create the GitHub release with the TrimUI OS and MustardOS packages
+      - name: Create the GitHub release with the MustardOS packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          files="HI5-brick.zip HI5-brickpro.zip HI5-mustardos-brick.muxapp HI5-mustardos-brickpro.muxapp"
+          files="HI5-mustardos-brick.muxapp HI5-mustardos-brickpro.muxapp"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" $files --repo "$GITHUB_REPOSITORY" --clobber
           else
