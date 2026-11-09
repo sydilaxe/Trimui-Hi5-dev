@@ -12,7 +12,7 @@ output for syncing other gear, Wi-Fi tempo sync between units, and USB MIDI cloc
 The engine is the Miyoo version's, unchanged: the same song sounds the same, sample for sample,
 and a `hi5.sav` saved on the Miyoo loads as it is.
 
-**Latest release:** [v0.3.0](../../releases/tag/v0.3.0) · [all releases](../../releases)
+**Latest release:** [v0.5.0](../../releases/tag/v0.5.0) · [all releases](../../releases)
 
 ## Install
 
