@@ -17,6 +17,10 @@ samples load on a thread while the loading screen keeps being presented. `make t
 screenshots and audio on the host into `build/test` and prints the checks. Without zig on the
 path, `pip install ziglang==0.14.1`.
 
+`mux_launch.sh` holds MustardOS's idle off while the app is open (its Idle Mute would stop the sound two
+minutes after the last press): `idle_inhibit` re-set every 2 s and `caffeine`, given back on exit. The block
+is the same in Jaffedrone, Columbia Street, HI5, RadioScan and Conduit; keep the copies the same.
+
 Where the code comes from:
 
 - `src/engine.c`, `src/ui.c`, `src/gfx.c`: the Miyoo version's. Keep the engine the same sound as
