@@ -48,6 +48,16 @@ turns it off.
 
 The state autosaves to `hi5.sav` in the app folder. A song saved on the Miyoo loads as it is: copy its `hi5.sav` into the folder.
 
+### MustardOS's idle
+
+Two minutes without a press, MustardOS dims the screen, drops the processor to its slowest and, with
+**Idle Mute** on (its default), mutes the sound; later it can put the device to sleep. Music goes on with
+the hands off, so the sound would stop a while after the last press and come back with the next. While
+HI5 is open, `mux_launch.sh` asks MustardOS not to: it sets MustardOS's `idle_inhibit` (again every
+2 s, as MustardOS's idle watcher clears it when the buttons go quiet) and its `caffeine` flag, and gives both
+back when HI5 closes. An empty file named `no_keep_awake` in the app folder leaves MustardOS's idle as
+it is.
+
 ### Over Wi-Fi
 
 With the TrimUI's SSH server on (on MustardOS, Secure Shell under Web Services), run this on a
